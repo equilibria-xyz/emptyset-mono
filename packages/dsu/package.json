@@ -1,7 +1,7 @@
 {
-  "name": "@emptyset/reserve",
+  "name": "@emptyset/dsu",
   "version": "0.1.0",
-  "description": "Emptyset Reserve contracts",
+  "description": "Emptyset DSU contracts",
   "files": [
     "contracts",
     "artifacts/contracts",
