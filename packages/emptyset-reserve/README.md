@@ -1,6 +1,6 @@
-# Perennial Oracle
+# Emptyset Reserve
 
-Oracle normalization contracts for the perennial protocol.
+Reserve contracts for the Emptyset protocol.
 
 ## Usage
 

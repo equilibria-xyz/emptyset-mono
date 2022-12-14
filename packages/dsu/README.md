@@ -1,6 +1,6 @@
-# Perennial Oracle
+# Emptyset DSU
 
-Oracle normalization contracts for the perennial protocol.
+DSU Token contracts for the Emptyset protocol.
 
 ## Usage
 
