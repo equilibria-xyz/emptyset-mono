@@ -1,4 +1,3 @@
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
 import { constants, utils } from 'ethers'
@@ -12,14 +11,10 @@ describe('Registry', () => {
   let user: SignerWithAddress
   let dsu: DSU
 
-  const beforeFixture = async () => {
+  beforeEach(async () => {
     ;[owner, user] = await ethers.getSigners()
 
     dsu = await new DSU__factory(owner).deploy()
-  }
-
-  beforeEach(async () => {
-    await loadFixture(beforeFixture)
   })
 
   describe('#mint', () => {

@@ -1,5 +1,4 @@
 import { FakeContract, smock } from '@defi-wonderland/smock'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect, use } from 'chai'
 import { utils } from 'ethers'
@@ -16,7 +15,7 @@ describe('SimpleReserve', () => {
   let usdc: FakeContract<IERC20Metadata>
   let dsu: FakeContract<DSU>
 
-  const beforeFixture = async () => {
+  beforeEach(async () => {
     ;[owner, user] = await ethers.getSigners()
 
     usdc = await smock.fake<IERC20Metadata>('IERC20Metadata')
@@ -26,16 +25,33 @@ describe('SimpleReserve', () => {
     usdc.decimals.returns(6)
 
     reserve = await new SimpleReserve__factory(owner).deploy(dsu.address, usdc.address)
-  }
-
-  beforeEach(async () => {
-    await loadFixture(beforeFixture)
   })
 
   describe('#constructor', () => {
     it('constructs correctly', async () => {
       expect(await reserve.DSU()).to.equal(dsu.address)
       expect(await reserve.USDC()).to.equal(usdc.address)
+    })
+  })
+
+  describe('#initialize', () => {
+    it('does nothing if already DSU owner', async () => {
+      dsu.owner.returns(reserve.address)
+      await expect(reserve.initialize()).to.not.be.reverted
+    })
+
+    it('accepts ownership if not DSU owner', async () => {
+      dsu.owner.returns(dsu.address)
+      dsu.acceptOwnership.whenCalledWith().returns()
+      await expect(reserve.initialize()).to.not.be.reverted
+      expect(dsu.acceptOwnership).to.have.been.called
+    })
+
+    it('reverts if not pending owner', async () => {
+      dsu.owner.returns(dsu.address)
+      dsu.acceptOwnership.reverts('Ownable2Step: caller is not the new owner')
+      await expect(reserve.initialize()).to.be.reverted
+      expect(dsu.acceptOwnership).to.have.been.called
     })
   })
 
