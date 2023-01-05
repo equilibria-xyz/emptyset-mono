@@ -11,7 +11,7 @@ import {
 } from '../../../types/generated'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
-import { impersonate } from '../../testutil'
+import { impersonate } from '../../../../common/testutil'
 
 const { ethers, deployments } = HRE
 
