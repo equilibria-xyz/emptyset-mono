@@ -1,7 +1,13 @@
 import { dirname } from 'path'
 import defaultConfig from '../common/hardhat.default.config'
 
-const dsuDir = dirname(require.resolve('@emptyset/dsu/package.json'))
+// DSU is only a dev dependency so may not exist
+let dsuDir = ''
+try {
+  dsuDir = dirname(require.resolve('@emptyset/reserve/package.json'))
+} catch {
+  // pass
+}
 
 const config = defaultConfig({
   externalDeployments: {
@@ -13,13 +19,6 @@ const config = defaultConfig({
     hardhat: [`${dsuDir}/deployments/mainnet`],
     localhost: [`${dsuDir}/deployments/localhost`],
   },
-  dependencyPaths: [
-    '@emptyset/dsu/contracts/DSU.sol',
-    '@equilibria/root/control/unstructured/CrossChainOwner/UCrossChainOwner_Arbitrum.sol',
-    '@equilibria/root/control/unstructured/CrossChainOwner/UCrossChainOwner_Optimism.sol',
-    '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol',
-    '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol',
-  ],
 })
 
 export default config

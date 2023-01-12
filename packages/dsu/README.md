@@ -1,6 +1,6 @@
-# Emptyset Reserve
+# Emptyset DSU
 
-Reserve contracts for the Emptyset protocol.
+DSU Token contracts for the Emptyset protocol.
 
 ## Usage
 

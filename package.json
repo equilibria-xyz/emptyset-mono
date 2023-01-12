@@ -8,7 +8,11 @@
   ],
   "scripts": {
     "prepare": "husky install",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "deploy:fork:optimismGoerli": "concurrently \"yarn workspace @emptyset/reserve run node:fork:optimismGoerli --no-deploy > /dev/null\" \"./scripts/deploy_optimism_goerli_fork.sh\"",
+    "deploy:optimismGoerli": "./scripts/deploy_optimism_goerli.sh",
+    "deploy:fork:arbitrumGoerli": "concurrently \"yarn workspace @emptyset/reserve run node:fork:arbitrumGoerli --no-deploy > /dev/null\" \"./scripts/deploy_arbitrum_goerli_fork.sh\"",
+    "deploy:arbitrumGoerli": "./scripts/deploy_arbitrum_goerli.sh"
   },
   "author": "",
   "license": "APACHE-2.0",
@@ -32,6 +36,7 @@
     "@typescript-eslint/eslint-plugin": "^4.26.1",
     "@typescript-eslint/parser": "^4.26.1",
     "chai": "^4.2.0",
+    "concurrently": "^7.6.0",
     "dotenv": "^8.2.0",
     "eslint": "^7.28.0",
     "eslint-config-prettier": "^8.3.0",
