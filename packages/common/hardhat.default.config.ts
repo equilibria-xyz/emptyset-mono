@@ -13,7 +13,7 @@ import 'hardhat-gas-reporter'
 import 'hardhat-contract-sizer'
 import 'hardhat-deploy'
 import 'hardhat-dependency-compiler'
-import { getChainId, isArbitrum, isOptimism, SupportedChain } from './testutil/network'
+import { getChainId, isArbitrum, isMainnet, isOptimism, SupportedChain } from './testutil/network'
 
 export const SOLIDITY_VERSION = '0.8.17'
 
@@ -25,6 +25,8 @@ const ETHERSCAN_API_KEY_OPTIMISM = process.env.ETHERSCAN_API_KEY_OPTIMISM || ''
 const ETHERSCAN_API_KEY_ARBITRUM = process.env.ETHERSCAN_API_KEY_ARBITRUM || ''
 
 const MAINNET_NODE_URL = process.env.MAINNET_NODE_URL || ''
+const ARBITRUM_NODE_URL = process.env.ARBITRUM_NODE_URL || ''
+const OPTIMISM_NODE_URL = process.env.OPTIMISM_NODE_URL || ''
 const GOERLI_NODE_URL = process.env.GOERLI_NODE_URL || ''
 const OPTIMISM_GOERLI_NODE_URL = process.env.OPTIMISM_GOERLI_NODE_URL || ''
 const ARBITRUM_GOERLI_NODE_URL = process.env.ARBITRUM_GOERLI_NODE_URL || ''
@@ -44,6 +46,10 @@ function getUrl(networkName: SupportedChain): string {
   switch (networkName) {
     case 'mainnet':
       return MAINNET_NODE_URL
+    case 'arbitrum':
+      return ARBITRUM_NODE_URL
+    case 'optimism':
+      return OPTIMISM_NODE_URL
     case 'goerli':
       return GOERLI_NODE_URL
     case 'optimismGoerli':
@@ -74,7 +80,7 @@ function createNetworkConfig(network: SupportedChain): NetworkUserConfig {
     },
   }
 
-  if (network === 'mainnet') {
+  if (isMainnet(network)) {
     cfg.accounts = PRIVATE_KEY_MAINNET ? [PRIVATE_KEY_MAINNET] : []
   }
 
@@ -114,6 +120,8 @@ export default function defaultConfig({
       goerli: createNetworkConfig('goerli'),
       optimismGoerli: createNetworkConfig('optimismGoerli'),
       arbitrumGoerli: createNetworkConfig('arbitrumGoerli'),
+      arbitrum: createNetworkConfig('arbitrum'),
+      optimism: createNetworkConfig('optimism'),
       mainnet: createNetworkConfig('mainnet'),
     },
     solidity: {
@@ -172,6 +180,8 @@ export default function defaultConfig({
       deployments: {
         kovan: ['external/deployments/kovan', ...(externalDeployments?.kovan || [])],
         goerli: ['external/deployments/goerli', ...(externalDeployments?.goerli || [])],
+        arbitrum: ['external/deployments/arbitrum', ...(externalDeployments?.arbitrum || [])],
+        optimism: ['external/deployments/optimism', ...(externalDeployments?.optimism || [])],
         mainnet: ['external/deployments/mainnet', ...(externalDeployments?.mainnet || [])],
         optimismGoerli: ['external/deployments/optimismGoerli', ...(externalDeployments?.optimismGoerli || [])],
         arbitrumGoerli: ['external/deployments/arbitrumGoerli', ...(externalDeployments?.arbitrumGoerli || [])],
