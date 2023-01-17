@@ -15,6 +15,8 @@ const config = defaultConfig({
     goerli: [`${dsuDir}/deployments/goerli`],
     optimismGoerli: [`${dsuDir}/deployments/optimismGoerli`],
     arbitrumGoerli: [`${dsuDir}/deployments/arbitrumGoerli`],
+    arbitrum: [`${dsuDir}/deployments/arbitrum`],
+    optimism: [`${dsuDir}/deployments/optimism`],
     mainnet: [`${dsuDir}/deployments/mainnet`],
     hardhat: [`${dsuDir}/deployments/mainnet`],
     localhost: [`${dsuDir}/deployments/localhost`],
