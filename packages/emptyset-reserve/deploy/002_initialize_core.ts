@@ -7,7 +7,7 @@ import {
   UCrossChainOwner__factory,
 } from '../types/generated'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { isArbitrum, isOptimism } from '../../common/testutil/network'
+import { isArbitrum, isBase, isOptimism } from '../../common/testutil/network'
 import { getMultisigAddress } from '../../common/testutil/constants'
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -18,7 +18,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const dsu = new DSU__factory(deployerSigner).attach((await get('DSU')).address)
 
-  const isCrossChain = isArbitrum(network.name) || isOptimism(network.name)
+  const isCrossChain = isArbitrum(network.name) || isOptimism(network.name) || isBase(network.name)
   if (isCrossChain) {
     console.log(`Crosschain Network Detected: ${network.name}`)
   }

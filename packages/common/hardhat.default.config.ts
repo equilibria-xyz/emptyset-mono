@@ -13,7 +13,7 @@ import 'hardhat-gas-reporter'
 import 'hardhat-contract-sizer'
 import 'hardhat-deploy'
 import 'hardhat-dependency-compiler'
-import { getChainId, isArbitrum, isMainnet, isOptimism, SupportedChain } from './testutil/network'
+import { getChainId, isArbitrum, isBase, isMainnet, isOptimism, SupportedChain } from './testutil/network'
 
 export const SOLIDITY_VERSION = '0.8.17'
 
@@ -30,6 +30,7 @@ const OPTIMISM_NODE_URL = process.env.OPTIMISM_NODE_URL || ''
 const GOERLI_NODE_URL = process.env.GOERLI_NODE_URL || ''
 const OPTIMISM_GOERLI_NODE_URL = process.env.OPTIMISM_GOERLI_NODE_URL || ''
 const ARBITRUM_GOERLI_NODE_URL = process.env.ARBITRUM_GOERLI_NODE_URL || ''
+const BASE_GOERLI_NODE_URL = process.env.BASE_GOERLI_NODE_URL || ''
 
 const FORK_ENABLED = process.env.FORK_ENABLED === 'true' || false
 const FORK_NETWORK = process.env.FORK_NETWORK || 'mainnet'
@@ -56,16 +57,19 @@ function getUrl(networkName: SupportedChain): string {
       return OPTIMISM_GOERLI_NODE_URL
     case 'arbitrumGoerli':
       return ARBITRUM_GOERLI_NODE_URL
+    case 'baseGoerli':
+      return BASE_GOERLI_NODE_URL
     default:
       return ''
   }
 }
 
-function getEtherscanApiKey(networkName: SupportedChain): string {
-  if (isOptimism(networkName)) return ETHERSCAN_API_KEY_OPTIMISM
-  if (isArbitrum(networkName)) return ETHERSCAN_API_KEY_ARBITRUM
+function getEtherscanConfig(networkName: SupportedChain): { apiKey: string; apiUrl?: string } {
+  if (isOptimism(networkName)) return { apiKey: ETHERSCAN_API_KEY_OPTIMISM }
+  if (isArbitrum(networkName)) return { apiKey: ETHERSCAN_API_KEY_ARBITRUM }
+  if (isBase(networkName)) return { apiKey: '', apiUrl: 'https://api-goerli.basescan.org' } // no API key required
 
-  return ETHERSCAN_API_KEY_MAINNET
+  return { apiKey: ETHERSCAN_API_KEY_MAINNET }
 }
 
 function createNetworkConfig(network: SupportedChain): NetworkUserConfig {
@@ -74,9 +78,7 @@ function createNetworkConfig(network: SupportedChain): NetworkUserConfig {
     chainId: getChainId(network),
     url: getUrl(network),
     verify: {
-      etherscan: {
-        apiKey: getEtherscanApiKey(network),
-      },
+      etherscan: getEtherscanConfig(network),
     },
   }
 
@@ -123,6 +125,7 @@ export default function defaultConfig({
       arbitrum: createNetworkConfig('arbitrum'),
       optimism: createNetworkConfig('optimism'),
       mainnet: createNetworkConfig('mainnet'),
+      baseGoerli: createNetworkConfig('baseGoerli'),
     },
     solidity: {
       compilers: [
@@ -185,6 +188,7 @@ export default function defaultConfig({
         mainnet: ['external/deployments/mainnet', ...(externalDeployments?.mainnet || [])],
         optimismGoerli: ['external/deployments/optimismGoerli', ...(externalDeployments?.optimismGoerli || [])],
         arbitrumGoerli: ['external/deployments/arbitrumGoerli', ...(externalDeployments?.arbitrumGoerli || [])],
+        baseGoerli: ['external/deployments/baseGoerli', ...(externalDeployments?.baseGoerli || [])],
         hardhat: [FORK_ENABLED ? `external/deployments/${FORK_NETWORK}` : '', ...(externalDeployments?.hardhat || [])],
         localhost: [
           FORK_ENABLED ? `external/deployments/${FORK_NETWORK}` : '',

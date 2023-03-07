@@ -1,25 +1,26 @@
 import { dirname } from 'path'
 import defaultConfig from '../common/hardhat.default.config'
 
-// DSU is only a dev dependency so may not exist
-let dsuDir = ''
+// Reserve is only a dev dependency so may not exist
+let reserveDir = ''
 try {
-  dsuDir = dirname(require.resolve('@emptyset/reserve/package.json'))
+  reserveDir = dirname(require.resolve('@emptyset/reserve/package.json'))
 } catch {
   // pass
 }
 
 const config = defaultConfig({
   externalDeployments: {
-    kovan: [`${dsuDir}/deployments/kovan`],
-    goerli: [`${dsuDir}/deployments/goerli`],
-    optimismGoerli: [`${dsuDir}/deployments/optimismGoerli`],
-    arbitrumGoerli: [`${dsuDir}/deployments/arbitrumGoerli`],
-    arbitrum: [`${dsuDir}/deployments/arbitrum`],
-    optimism: [`${dsuDir}/deployments/optimism`],
-    mainnet: [`${dsuDir}/deployments/mainnet`],
-    hardhat: [`${dsuDir}/deployments/mainnet`],
-    localhost: [`${dsuDir}/deployments/localhost`],
+    kovan: [`${reserveDir}/deployments/kovan`],
+    goerli: [`${reserveDir}/deployments/goerli`],
+    optimismGoerli: [`${reserveDir}/deployments/optimismGoerli`],
+    arbitrumGoerli: [`${reserveDir}/deployments/arbitrumGoerli`],
+    baseGoerli: [`${reserveDir}/deployments/baseGoerli`],
+    arbitrum: [`${reserveDir}/deployments/arbitrum`],
+    optimism: [`${reserveDir}/deployments/optimism`],
+    mainnet: [`${reserveDir}/deployments/mainnet`],
+    hardhat: [`${reserveDir}/deployments/mainnet`],
+    localhost: [`${reserveDir}/deployments/localhost`],
   },
 })
 
