@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 import { DSU__factory } from '../types/generated'
-import { isArbitrum, isOptimism } from '../../common/testutil/network'
+import { isArbitrum, isBase, isOptimism } from '../../common/testutil/network'
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts, ethers, network } = hre
@@ -22,7 +22,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       log: true,
       autoMine: true,
     })
-  } else if (isOptimism(network.name)) {
+  } else if (isOptimism(network.name) || isBase(network.name)) {
     await deploy('UCrossChainOwner', {
       contract: 'UCrossChainOwner_Optimism',
       from: deployer,
