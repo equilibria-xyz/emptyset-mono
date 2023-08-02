@@ -18,7 +18,9 @@
     "deploy:fork:arbitrum": "concurrently \"yarn workspace @emptyset/reserve run node:fork:arbitrum --no-deploy > /dev/null\" \"./scripts/deploy_arbitrum_fork.sh\"",
     "deploy:arbitrum": "./scripts/deploy_arbitrum.sh",
     "deploy:fork:optimism": "concurrently \"yarn workspace @emptyset/reserve run node:fork:optimism --no-deploy > /dev/null\" \"./scripts/deploy_optimism_fork.sh\"",
-    "deploy:optimism": "./scripts/deploy_optimism.sh"
+    "deploy:optimism": "./scripts/deploy_optimism.sh",
+    "deploy:fork:base": "concurrently \"yarn workspace @emptyset/reserve run node:fork:base --no-deploy > /dev/null\" \"./scripts/deploy_base_fork.sh\"",
+    "deploy:base": "./scripts/deploy_base.sh"
   },
   "author": "",
   "license": "APACHE-2.0",
@@ -31,7 +33,7 @@
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomiclabs/hardhat-ethers": "^2.0.1",
-    "@nomiclabs/hardhat-etherscan": "^2.1.1",
+    "@nomiclabs/hardhat-etherscan": "^3.1.5",
     "@nomiclabs/hardhat-waffle": "^2.0.0",
     "@openzeppelin/contracts": "^4.8.0",
     "@typechain/ethers-v5": "^7.0.1",

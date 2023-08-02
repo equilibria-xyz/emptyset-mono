@@ -2,6 +2,7 @@ export const ALL_CHAINS = [
   'mainnet',
   'arbitrum',
   'optimism',
+  'base',
   'goerli',
   'optimismGoerli',
   'arbitrumGoerli',
@@ -13,13 +14,13 @@ export const ALL_CHAINS = [
 export type SupportedChains = typeof ALL_CHAINS
 export type SupportedChain = SupportedChains[number]
 
-export const MAINNETS: SupportedChain[] = ['mainnet', 'arbitrum', 'optimism']
+export const MAINNETS: SupportedChain[] = ['mainnet', 'arbitrum', 'optimism', 'base']
 export const TESTNETS: SupportedChain[] = ['goerli', 'arbitrumGoerli', 'optimismGoerli', 'baseGoerli']
 export const DEVNETS: SupportedChain[] = ['hardhat', 'localhost']
 export const ETHEREUM_NETS: SupportedChain[] = ['mainnet', 'goerli']
 export const ARBITRUM_NETS: SupportedChain[] = ['arbitrum', 'arbitrumGoerli']
 export const OPTIMISM_NETS: SupportedChain[] = ['optimism', 'optimismGoerli']
-export const BASE_NETS: SupportedChain[] = ['baseGoerli']
+export const BASE_NETS: SupportedChain[] = ['base', 'baseGoerli']
 
 export function isSupported(networkName: string): networkName is SupportedChain {
   return ALL_CHAINS.includes(networkName as SupportedChain)
@@ -34,6 +35,8 @@ export function getChainId(networkName: string): number {
       return 42161
     case 'optimism':
       return 10
+    case 'base':
+      return 8453
     case 'goerli':
       return 5
     case 'optimismGoerli':
