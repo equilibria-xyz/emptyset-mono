@@ -54,10 +54,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     throw 'No Owner Found'
   }
 
+  console.log('Using owner address: ', ownerAddress)
+
   if ((await proxyAdmin.owner()) === ownerAddress) {
-    console.log('ProxyAdmin already owned by cross chain owner.')
+    console.log('ProxyAdmin already owned by owner.')
   } else {
-    process.stdout.write('Transferring ProxyAdmin ownership to cross chain owner... ')
+    process.stdout.write('Transferring ProxyAdmin ownership to owner... ')
     await (await proxyAdmin.transferOwnership(ownerAddress)).wait(2)
     process.stdout.write('complete.\n')
   }

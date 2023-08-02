@@ -13,6 +13,7 @@ const config = defaultConfig({
     arbitrum: [`${dsuDir}/deployments/arbitrum`],
     optimism: [`${dsuDir}/deployments/optimism`],
     mainnet: [`${dsuDir}/deployments/mainnet`],
+    base: [`${dsuDir}/deployments/base`],
     hardhat: [`${dsuDir}/deployments/mainnet`],
     localhost: [`${dsuDir}/deployments/localhost`],
   },

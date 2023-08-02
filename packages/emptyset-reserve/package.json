@@ -37,6 +37,8 @@
     "deploy:fork:optimism": "FORK_ENABLED=true FORK_NETWORK=optimism hardhat deploy --network localhost",
     "node:fork:mainnet": "FORK_ENABLED=true FORK_NETWORK=mainnet NODE_INTERVAL_MINING=500 hardhat node",
     "deploy:fork:mainnet": "FORK_ENABLED=true FORK_NETWORK=mainnet hardhat deploy --network localhost",
+    "node:fork:base": "FORK_ENABLED=true FORK_NETWORK=base NODE_INTERVAL_MINING=500 hardhat node",
+    "deploy:fork:base": "FORK_ENABLED=true FORK_NETWORK=base hardhat deploy --network localhost",
     "prepack": "yarn clean && yarn build && find artifacts/contracts -name '*.dbg.json' -type f -delete"
   },
   "author": "",

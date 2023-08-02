@@ -23,10 +23,12 @@ const PRIVATE_KEY_TESTNET = process.env.PRIVATE_KEY_TESTNET || ''
 const ETHERSCAN_API_KEY_MAINNET = process.env.ETHERSCAN_API_KEY_MAINNET || ''
 const ETHERSCAN_API_KEY_OPTIMISM = process.env.ETHERSCAN_API_KEY_OPTIMISM || ''
 const ETHERSCAN_API_KEY_ARBITRUM = process.env.ETHERSCAN_API_KEY_ARBITRUM || ''
+const ETHERSCAN_API_KEY_BASE = process.env.ETHERSCAN_API_KEY_BASE || ''
 
 const MAINNET_NODE_URL = process.env.MAINNET_NODE_URL || ''
 const ARBITRUM_NODE_URL = process.env.ARBITRUM_NODE_URL || ''
 const OPTIMISM_NODE_URL = process.env.OPTIMISM_NODE_URL || ''
+const BASE_NODE_URL = process.env.BASE_NODE_URL || ''
 const GOERLI_NODE_URL = process.env.GOERLI_NODE_URL || ''
 const OPTIMISM_GOERLI_NODE_URL = process.env.OPTIMISM_GOERLI_NODE_URL || ''
 const ARBITRUM_GOERLI_NODE_URL = process.env.ARBITRUM_GOERLI_NODE_URL || ''
@@ -51,6 +53,8 @@ function getUrl(networkName: SupportedChain): string {
       return ARBITRUM_NODE_URL
     case 'optimism':
       return OPTIMISM_NODE_URL
+    case 'base':
+      return BASE_NODE_URL
     case 'goerli':
       return GOERLI_NODE_URL
     case 'optimismGoerli':
@@ -64,10 +68,10 @@ function getUrl(networkName: SupportedChain): string {
   }
 }
 
-function getEtherscanConfig(networkName: SupportedChain): { apiKey: string; apiUrl?: string } {
+function getEtherscanApiConfig(networkName: SupportedChain): { apiKey: string; apiUrl?: string } {
   if (isOptimism(networkName)) return { apiKey: ETHERSCAN_API_KEY_OPTIMISM }
   if (isArbitrum(networkName)) return { apiKey: ETHERSCAN_API_KEY_ARBITRUM }
-  if (isBase(networkName)) return { apiKey: '', apiUrl: 'https://api-goerli.basescan.org' } // no API key required
+  if (isBase(networkName)) return { apiKey: ETHERSCAN_API_KEY_BASE }
 
   return { apiKey: ETHERSCAN_API_KEY_MAINNET }
 }
@@ -78,7 +82,7 @@ function createNetworkConfig(network: SupportedChain): NetworkUserConfig {
     chainId: getChainId(network),
     url: getUrl(network),
     verify: {
-      etherscan: getEtherscanConfig(network),
+      etherscan: getEtherscanApiConfig(network),
     },
   }
 
@@ -125,6 +129,7 @@ export default function defaultConfig({
       arbitrum: createNetworkConfig('arbitrum'),
       optimism: createNetworkConfig('optimism'),
       mainnet: createNetworkConfig('mainnet'),
+      base: createNetworkConfig('base'),
       baseGoerli: createNetworkConfig('baseGoerli'),
     },
     solidity: {
@@ -155,7 +160,16 @@ export default function defaultConfig({
       deployer: 0,
     },
     etherscan: {
-      apiKey: ETHERSCAN_API_KEY_MAINNET,
+      apiKey: {
+        mainnet: getEtherscanApiConfig('mainnet').apiKey,
+        optimisticEthereum: getEtherscanApiConfig('optimism').apiKey,
+        arbitrumOne: getEtherscanApiConfig('arbitrum').apiKey,
+        base: getEtherscanApiConfig('base').apiKey,
+        goerli: getEtherscanApiConfig('goerli').apiKey,
+        optimisticGoerli: getEtherscanApiConfig('optimismGoerli').apiKey,
+        arbitrumGoerli: getEtherscanApiConfig('arbitrumGoerli').apiKey,
+        baseGoerli: getEtherscanApiConfig('baseGoerli').apiKey,
+      },
     },
     gasReporter: {
       currency: 'USD',
@@ -186,6 +200,7 @@ export default function defaultConfig({
         arbitrum: ['external/deployments/arbitrum', ...(externalDeployments?.arbitrum || [])],
         optimism: ['external/deployments/optimism', ...(externalDeployments?.optimism || [])],
         mainnet: ['external/deployments/mainnet', ...(externalDeployments?.mainnet || [])],
+        base: ['external/deployments/base', ...(externalDeployments?.base || [])],
         optimismGoerli: ['external/deployments/optimismGoerli', ...(externalDeployments?.optimismGoerli || [])],
         arbitrumGoerli: ['external/deployments/arbitrumGoerli', ...(externalDeployments?.arbitrumGoerli || [])],
         baseGoerli: ['external/deployments/baseGoerli', ...(externalDeployments?.baseGoerli || [])],
