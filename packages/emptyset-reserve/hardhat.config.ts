@@ -9,6 +9,7 @@ const config = defaultConfig({
     goerli: [`${dsuDir}/deployments/goerli`],
     optimismGoerli: [`${dsuDir}/deployments/optimismGoerli`],
     arbitrumGoerli: [`${dsuDir}/deployments/arbitrumGoerli`],
+    arbitrumSepolia: [`${dsuDir}/deployments/arbitrumSepolia`],
     baseGoerli: [`${dsuDir}/deployments/baseGoerli`],
     arbitrum: [`${dsuDir}/deployments/arbitrum`],
     optimism: [`${dsuDir}/deployments/optimism`],
