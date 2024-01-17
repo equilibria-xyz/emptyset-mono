@@ -21,7 +21,8 @@
     "deploy:optimism": "./scripts/deploy_optimism.sh",
     "deploy:fork:base": "concurrently \"yarn workspace @emptyset/reserve run node:fork:base --no-deploy > /dev/null\" \"./scripts/deploy_base_fork.sh\"",
     "deploy:base": "./scripts/deploy_base.sh",
-    "deploy:arbitrumSepolia": "./scripts/deploy_arbitrum_sepolia.sh"
+    "deploy:arbitrumSepolia": "./scripts/deploy_arbitrum_sepolia.sh",
+    "deploy:blastSepolia": "./scripts/deploy_blast_sepolia.sh"
   },
   "author": "",
   "license": "APACHE-2.0",

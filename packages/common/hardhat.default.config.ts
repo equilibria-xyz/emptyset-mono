@@ -13,7 +13,7 @@ import 'hardhat-gas-reporter'
 import 'hardhat-contract-sizer'
 import 'hardhat-deploy'
 import 'hardhat-dependency-compiler'
-import { getChainId, isArbitrum, isBase, isMainnet, isOptimism, SupportedChain } from './testutil/network'
+import { getChainId, isArbitrum, isBase, isBlast, isMainnet, isOptimism, SupportedChain } from './testutil/network'
 
 export const SOLIDITY_VERSION = '0.8.17'
 
@@ -34,6 +34,7 @@ const OPTIMISM_GOERLI_NODE_URL = process.env.OPTIMISM_GOERLI_NODE_URL || ''
 const ARBITRUM_GOERLI_NODE_URL = process.env.ARBITRUM_GOERLI_NODE_URL || ''
 const BASE_GOERLI_NODE_URL = process.env.BASE_GOERLI_NODE_URL || ''
 const ARBITRUM_SEPOLIA_NODE_URL = process.env.ARBITRUM_SEPOLIA_NODE_URL || ''
+const BLAST_SEPOLIA_NODE_URL = process.env.BLAST_SEPOLIA_NODE_URL || ''
 
 const FORK_ENABLED = process.env.FORK_ENABLED === 'true' || false
 const FORK_NETWORK = process.env.FORK_NETWORK || 'mainnet'
@@ -66,6 +67,8 @@ function getUrl(networkName: SupportedChain): string {
       return ARBITRUM_SEPOLIA_NODE_URL
     case 'baseGoerli':
       return BASE_GOERLI_NODE_URL
+    case 'blastSepolia':
+      return BLAST_SEPOLIA_NODE_URL
     default:
       return ''
   }
@@ -75,6 +78,7 @@ function getEtherscanApiConfig(networkName: SupportedChain): { apiKey: string; a
   if (isOptimism(networkName)) return { apiKey: ETHERSCAN_API_KEY_OPTIMISM }
   if (isArbitrum(networkName)) return { apiKey: ETHERSCAN_API_KEY_ARBITRUM }
   if (isBase(networkName)) return { apiKey: ETHERSCAN_API_KEY_BASE }
+  if (isBlast(networkName)) return { apiKey: 'blast_sepolia' } // Not required
 
   return { apiKey: ETHERSCAN_API_KEY_MAINNET }
 }
@@ -135,6 +139,7 @@ export default function defaultConfig({
       mainnet: createNetworkConfig('mainnet'),
       base: createNetworkConfig('base'),
       baseGoerli: createNetworkConfig('baseGoerli'),
+      blastSepolia: createNetworkConfig('blastSepolia'),
     },
     solidity: {
       compilers: [
@@ -174,7 +179,18 @@ export default function defaultConfig({
         arbitrumGoerli: getEtherscanApiConfig('arbitrumGoerli').apiKey,
         arbitrumSepolia: getEtherscanApiConfig('arbitrumSepolia').apiKey,
         baseGoerli: getEtherscanApiConfig('baseGoerli').apiKey,
+        blastSepolia: getEtherscanApiConfig('blastSepolia').apiKey,
       },
+      customChains: [
+        {
+          network: 'blastSepolia',
+          chainId: 168587773,
+          urls: {
+            apiURL: 'https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan',
+            browserURL: 'https://testnet.blastscan.io',
+          },
+        },
+      ],
     },
     gasReporter: {
       currency: 'USD',
@@ -210,6 +226,7 @@ export default function defaultConfig({
         arbitrumGoerli: ['external/deployments/arbitrumGoerli', ...(externalDeployments?.arbitrumGoerli || [])],
         arbitrumSepolia: ['external/deployments/arbitrumSepolia', ...(externalDeployments?.arbitrumSepolia || [])],
         baseGoerli: ['external/deployments/baseGoerli', ...(externalDeployments?.baseGoerli || [])],
+        blastSepolia: ['external/deployments/blastSepolia', ...(externalDeployments?.blastSepolia || [])],
         hardhat: [FORK_ENABLED ? `external/deployments/${FORK_NETWORK}` : '', ...(externalDeployments?.hardhat || [])],
         localhost: [
           FORK_ENABLED ? `external/deployments/${FORK_NETWORK}` : '',

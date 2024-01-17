@@ -7,7 +7,7 @@ import {
   UCrossChainOwner__factory,
 } from '../types/generated'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { isArbitrum, isBase, isOptimism } from '../../common/testutil/network'
+import { isArbitrum, isBase, isBlast, isMainnet, isOptimism } from '../../common/testutil/network'
 import { getMultisigAddress } from '../../common/testutil/constants'
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -18,7 +18,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const dsu = new DSU__factory(deployerSigner).attach((await get('DSU')).address)
 
-  const isCrossChain = isArbitrum(network.name) || isOptimism(network.name) || isBase(network.name)
+  const isCrossChain =
+    isMainnet(network.name) &&
+    (isArbitrum(network.name) || isOptimism(network.name) || isBase(network.name) || isBlast(network.name))
   if (isCrossChain) {
     console.log(`Crosschain Network Detected: ${network.name}`)
   }
@@ -30,7 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`Using ProxyAdmin at ${proxyAdmin.address}`)
   console.log(`Using Reserve at ${reserve.address}`)
 
-  let ownerAddress = getMultisigAddress(network.name)
+  let ownerAddress = isMainnet(network.name) ? getMultisigAddress(network.name) : deployer
   if (isCrossChain) {
     const crosschainOwner = await UCrossChainOwner__factory.connect(
       (

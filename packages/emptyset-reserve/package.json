@@ -39,6 +39,8 @@
     "deploy:fork:mainnet": "FORK_ENABLED=true FORK_NETWORK=mainnet hardhat deploy --network localhost",
     "node:fork:base": "FORK_ENABLED=true FORK_NETWORK=base NODE_INTERVAL_MINING=500 hardhat node",
     "deploy:fork:base": "FORK_ENABLED=true FORK_NETWORK=base hardhat deploy --network localhost",
+    "node:fork:blastSepolia": "FORK_ENABLED=true FORK_NETWORK=blastSepolia NODE_INTERVAL_MINING=500 hardhat node",
+    "deploy:fork:blastSepolia": "FORK_ENABLED=true FORK_NETWORK=blastSepolia hardhat deploy --network localhost",
     "prepack": "yarn clean && yarn build && find artifacts/contracts -name '*.dbg.json' -type f -delete"
   },
   "author": "",

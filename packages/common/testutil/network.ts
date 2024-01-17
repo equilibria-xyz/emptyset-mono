@@ -8,6 +8,7 @@ export const ALL_CHAINS = [
   'arbitrumGoerli',
   'arbitrumSepolia',
   'baseGoerli',
+  'blastSepolia',
   'hardhat',
   'localhost',
 ] as const
@@ -22,12 +23,14 @@ export const TESTNETS: SupportedChain[] = [
   'optimismGoerli',
   'baseGoerli',
   'arbitrumSepolia',
+  'blastSepolia',
 ]
 export const DEVNETS: SupportedChain[] = ['hardhat', 'localhost']
 export const ETHEREUM_NETS: SupportedChain[] = ['mainnet', 'goerli']
 export const ARBITRUM_NETS: SupportedChain[] = ['arbitrum', 'arbitrumGoerli', 'arbitrumSepolia']
 export const OPTIMISM_NETS: SupportedChain[] = ['optimism', 'optimismGoerli']
 export const BASE_NETS: SupportedChain[] = ['base', 'baseGoerli']
+export const BLAST_NETS: SupportedChain[] = ['blastSepolia']
 
 export function isSupported(networkName: string): networkName is SupportedChain {
   return ALL_CHAINS.includes(networkName as SupportedChain)
@@ -52,6 +55,8 @@ export function getChainId(networkName: string): number {
       return 421613
     case 'arbitrumSepolia':
       return 421614
+    case 'blastSepolia':
+      return 168587773
     case 'baseGoerli':
       return 84531
     case 'hardhat':
@@ -97,6 +102,16 @@ export function isBase(networkName: string): boolean {
       return process.env.FORK_ENABLED === 'true' && BASE_NETS.includes(process.env.FORK_NETWORK as SupportedChain)
     default:
       return BASE_NETS.includes(networkName)
+  }
+}
+
+export function isBlast(networkName: string): boolean {
+  if (!isSupported(networkName)) return false
+  switch (networkName) {
+    case 'localhost':
+      return process.env.FORK_ENABLED === 'true' && BLAST_NETS.includes(process.env.FORK_NETWORK as SupportedChain)
+    default:
+      return BLAST_NETS.includes(networkName)
   }
 }
 

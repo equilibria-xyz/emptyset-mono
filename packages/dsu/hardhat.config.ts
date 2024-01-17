@@ -21,6 +21,7 @@ const config = defaultConfig({
     optimism: [`${reserveDir}/deployments/optimism`],
     mainnet: [`${reserveDir}/deployments/mainnet`],
     base: [`${reserveDir}/deployments/base`],
+    blastSepolia: [`${reserveDir}/deployments/blastSepolia`],
     hardhat: [`${reserveDir}/deployments/mainnet`],
     localhost: [`${reserveDir}/deployments/localhost`],
   },
