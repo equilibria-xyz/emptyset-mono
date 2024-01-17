@@ -33,6 +33,7 @@ const GOERLI_NODE_URL = process.env.GOERLI_NODE_URL || ''
 const OPTIMISM_GOERLI_NODE_URL = process.env.OPTIMISM_GOERLI_NODE_URL || ''
 const ARBITRUM_GOERLI_NODE_URL = process.env.ARBITRUM_GOERLI_NODE_URL || ''
 const BASE_GOERLI_NODE_URL = process.env.BASE_GOERLI_NODE_URL || ''
+const ARBITRUM_SEPOLIA_NODE_URL = process.env.ARBITRUM_SEPOLIA_NODE_URL || ''
 
 const FORK_ENABLED = process.env.FORK_ENABLED === 'true' || false
 const FORK_NETWORK = process.env.FORK_NETWORK || 'mainnet'
@@ -61,6 +62,8 @@ function getUrl(networkName: SupportedChain): string {
       return OPTIMISM_GOERLI_NODE_URL
     case 'arbitrumGoerli':
       return ARBITRUM_GOERLI_NODE_URL
+    case 'arbitrumSepolia':
+      return ARBITRUM_SEPOLIA_NODE_URL
     case 'baseGoerli':
       return BASE_GOERLI_NODE_URL
     default:
@@ -126,6 +129,7 @@ export default function defaultConfig({
       goerli: createNetworkConfig('goerli'),
       optimismGoerli: createNetworkConfig('optimismGoerli'),
       arbitrumGoerli: createNetworkConfig('arbitrumGoerli'),
+      arbitrumSepolia: createNetworkConfig('arbitrumSepolia'),
       arbitrum: createNetworkConfig('arbitrum'),
       optimism: createNetworkConfig('optimism'),
       mainnet: createNetworkConfig('mainnet'),
@@ -168,6 +172,7 @@ export default function defaultConfig({
         goerli: getEtherscanApiConfig('goerli').apiKey,
         optimisticGoerli: getEtherscanApiConfig('optimismGoerli').apiKey,
         arbitrumGoerli: getEtherscanApiConfig('arbitrumGoerli').apiKey,
+        arbitrumSepolia: getEtherscanApiConfig('arbitrumSepolia').apiKey,
         baseGoerli: getEtherscanApiConfig('baseGoerli').apiKey,
       },
     },
@@ -203,6 +208,7 @@ export default function defaultConfig({
         base: ['external/deployments/base', ...(externalDeployments?.base || [])],
         optimismGoerli: ['external/deployments/optimismGoerli', ...(externalDeployments?.optimismGoerli || [])],
         arbitrumGoerli: ['external/deployments/arbitrumGoerli', ...(externalDeployments?.arbitrumGoerli || [])],
+        arbitrumSepolia: ['external/deployments/arbitrumSepolia', ...(externalDeployments?.arbitrumSepolia || [])],
         baseGoerli: ['external/deployments/baseGoerli', ...(externalDeployments?.baseGoerli || [])],
         hardhat: [FORK_ENABLED ? `external/deployments/${FORK_NETWORK}` : '', ...(externalDeployments?.hardhat || [])],
         localhost: [

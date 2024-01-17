@@ -15,6 +15,7 @@ const config = defaultConfig({
     goerli: [`${reserveDir}/deployments/goerli`],
     optimismGoerli: [`${reserveDir}/deployments/optimismGoerli`],
     arbitrumGoerli: [`${reserveDir}/deployments/arbitrumGoerli`],
+    arbitrumSepolia: [`${reserveDir}/deployments/arbitrumSepolia`],
     baseGoerli: [`${reserveDir}/deployments/baseGoerli`],
     arbitrum: [`${reserveDir}/deployments/arbitrum`],
     optimism: [`${reserveDir}/deployments/optimism`],
