@@ -38,7 +38,7 @@ describe('MigrationReserve', () => {
   })
 
   describe('#migrate', () => {
-    it('pulls USDC from the sender, wraps it as DSU', async () => {
+    it('pulls native USDC from the sender, returns bridge USDC', async () => {
       const amount = utils.parseEther('10')
 
       usdc.transferFrom.whenCalledWith(user.address, reserve.address, 10e6).returns(true)
@@ -50,7 +50,7 @@ describe('MigrationReserve', () => {
       expect(usdcBridged.transfer).to.have.been.calledWith(user.address, 10e6)
     })
 
-    it('pulls USDC from the sender, wraps it as DSU with rounding', async () => {
+    it('pulls native USDC from the sender, returns bridge USDC with rounding', async () => {
       const amount = utils.parseEther('10').add(1)
 
       usdc.transferFrom.whenCalledWith(user.address, reserve.address, 10e6).returns(true)
