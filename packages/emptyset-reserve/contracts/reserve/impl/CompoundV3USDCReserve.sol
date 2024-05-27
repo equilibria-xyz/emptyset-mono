@@ -7,13 +7,16 @@ import { UFixed6, UFixed6Lib } from "@equilibria/root/number/types/UFixed6.sol";
 import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.sol";
 import { ReserveBase } from "../ReserveBase.sol";
 
-contract CompoundV3USDC is ReserveBase {
+contract CompoundV3USDCReserve is ReserveBase {
     Token6 public immutable USDC; // solhint-disable-line var-name-mixedcase
     ICompoundV3USDC public immutable COMPOUND; // solhint-disable-line var-name-mixedcase
 
     constructor(Token18 dsu_, Token6 usdc_, ICompoundV3USDC compound_) ReserveBase(dsu_) {
         USDC = usdc_;
         COMPOUND = compound_;
+
+        // TODO: approvals?
+        // TODO: sanity checks on configuration (is there a market?)
     }
 
     function _pull(UFixed18 amount) internal override {

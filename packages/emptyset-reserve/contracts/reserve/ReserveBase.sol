@@ -7,6 +7,12 @@ import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.so
 import { Initializable } from "@equilibria/root/attribute/Initializable.sol";
 import { IReserve } from "../interfaces/IReserve.sol";
 
+// TODO: only deposit % of collateral
+// TODO: coordinator role
+// TODO: natspec
+// TODO: aave impl
+// TODO: noop impl
+
 abstract contract ReserveBase is IReserve, Initializable {
     Token18 public immutable DSU; // solhint-disable-line var-name-mixedcase
 
