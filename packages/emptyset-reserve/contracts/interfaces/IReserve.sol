@@ -10,14 +10,11 @@ import "@equilibria/root/token/types/Token6.sol";
  * @notice Interface for the protocol reserve
  */
 interface IReserve {
-    event Redeem(address indexed account, UFixed18 costAmount, UFixed18 redeemAmount);
     event Mint(address indexed account, UFixed18 mintAmount, UFixed18 costAmount);
-    event Borrow(address indexed account, UFixed18 borrowAmount);
-    event Repay(address indexed account, UFixed18 repayAmount);
+    event Redeem(address indexed account, UFixed18 costAmount, UFixed18 redeemAmount);
 
+    function mintPrice() external view returns (UFixed18);
     function redeemPrice() external view returns (UFixed18);
-    function debt(address borrower) external view returns (UFixed18);
-    function repay(address borrower, UFixed18 amount) external;
-    function mint(UFixed18 amount) external;
-    function redeem(UFixed18 amount) external;
+    function mint(UFixed18 amount) external returns (UFixed18 mintAmount);
+    function redeem(UFixed18 amount) external returns (UFixed18 redemptionAmount);
 }
