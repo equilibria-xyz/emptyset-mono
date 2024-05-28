@@ -15,8 +15,13 @@ contract CompoundV3USDCReserve is ReserveBase {
         USDC = usdc_;
         COMPOUND = compound_;
 
-        // TODO: approvals?
+        USDC.approve(address(COMPOUND));
+
         // TODO: sanity checks on configuration (is there a market?)
+    }
+
+    function initialize() public virtual initializer(2) {
+        __ReserveBase__initialize();
     }
 
     function _pull(UFixed18 amount) internal override {
@@ -32,15 +37,12 @@ contract CompoundV3USDCReserve is ReserveBase {
     }
 
     function _assets() internal override view returns (UFixed18) {
-        return UFixed18Lib.from(COMPOUND.balanceOf(address(this)));
+        return UFixed18Lib.from(USDC.balanceOf(address(this)));
     }
 
-    function _deposit(UFixed18 amount) internal override {
-        COMPOUND.supply(USDC, UFixed6Lib.from(amount, true));
-    }
-
-    function _withdraw(UFixed18 amount) internal override {
-        COMPOUND.withdraw(USDC, UFixed6Lib.from(amount));
+    function _allocate(UFixed18 amount) internal virtual override {
+        if (amount.isZero()) COMPOUND.supply(USDC, UFixed6Lib.from(_assets()));
+        else COMPOUND.withdraw(USDC, UFixed6Lib.from(amount));
     }
 }
 

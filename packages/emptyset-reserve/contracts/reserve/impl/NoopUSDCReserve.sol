@@ -22,19 +22,15 @@ contract CompoundV3USDCReserve is ReserveBase {
         USDC.push(msg.sender, UFixed6Lib.from(amount));
     }
 
-    function _collateral() internal override view returns (UFixed18) {
-        return UFixed18Lib.from(USDC.balanceOf(address(this)));
+    function _collateral() internal override pure returns (UFixed18) {
+        return UFixed18Lib.ZERO;
     }
 
     function _assets() internal override view returns (UFixed18) {
         return UFixed18Lib.from(USDC.balanceOf(address(this)));
     }
 
-    function _deposit(UFixed18) internal pure override {
-        return;
-    }
-
-    function _withdraw(UFixed18) internal pure override {
+    function _allocate(UFixed18) internal pure override {
         return;
     }
 }
