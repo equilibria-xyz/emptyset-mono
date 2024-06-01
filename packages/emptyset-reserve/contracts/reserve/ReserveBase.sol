@@ -9,6 +9,7 @@ import { IReserve } from "../interfaces/IReserve.sol";
 
 // TODO: natspec
 // TODO: aave impl
+// TODO: owner hook to withdraw excess
 
 abstract contract ReserveBase is IReserve, Initializable {
     Token18 public immutable DSU; // solhint-disable-line var-name-mixedcase
@@ -32,14 +33,14 @@ abstract contract ReserveBase is IReserve, Initializable {
     }
 
     function mint(UFixed18 amount) external returns (UFixed18 mintAmount) {
-        _pull(amount);
+        _pull(amount); // TODO: these pulls / push don't differentiate?
         _allocate(UFixed18Lib.ZERO);
         mintAmount = _mint(amount);
         _push(mintAmount);
     }
 
     function redeem(UFixed18 amount) external returns (UFixed18 redemptionAmount) {
-        _pull(amount);
+        _pull(amount); // TODO: these pulls / push don't differentiate?
         redemptionAmount = _redeem(amount);
         _allocate(redemptionAmount);
         _push(redemptionAmount);

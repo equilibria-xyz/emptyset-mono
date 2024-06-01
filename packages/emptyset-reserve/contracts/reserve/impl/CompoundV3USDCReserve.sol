@@ -14,14 +14,13 @@ contract CompoundV3USDCReserve is ReserveBase {
     constructor(Token18 dsu_, Token6 usdc_, ICompoundV3USDC compound_) ReserveBase(dsu_) {
         USDC = usdc_;
         COMPOUND = compound_;
-
-        USDC.approve(address(COMPOUND));
-
-        // TODO: sanity checks on configuration (is there a market?)
     }
 
     function initialize() public virtual initializer(2) {
         __ReserveBase__initialize();
+
+        USDC.approve(address(COMPOUND));
+        // TODO: sanity checks on configuration (is there a market?)
     }
 
     function _pull(UFixed18 amount) internal override {
