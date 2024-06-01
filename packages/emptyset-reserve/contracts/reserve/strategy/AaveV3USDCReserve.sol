@@ -8,44 +8,44 @@ import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.so
 import { ReserveBase } from "../ReserveBase.sol";
 
 contract AaveV3USDCReserve is ReserveBase {
-    Token6 public immutable USDC; // solhint-disable-line var-name-mixedcase
-    IAavePool public immutable AAVE; // solhint-disable-line var-name-mixedcase
-    Token6 public immutable ATOKEN; // solhint-disable-line var-name-mixedcase
+    Token6 public immutable usdc;
+    IAavePool public immutable aave;
+    Token6 public immutable aToken;
 
     constructor(Token18 dsu_, Token6 usdc_, IAavePool aave_) ReserveBase(dsu_) {
-        USDC = usdc_;
-        AAVE = aave_;
-        ATOKEN = Token6.wrap(aave_.getReserveData(Token6.unwrap((usdc_))).aTokenAddress);
+        usdc = usdc_;
+        aave = aave_;
+        aToken = Token6.wrap(aave_.getReserveData(Token6.unwrap((usdc_))).aTokenAddress);
     }
 
     function initialize() public virtual initializer(2) {
         __ReserveBase__initialize();
 
-        USDC.approve(address(AAVE));
+        usdc.approve(address(aave));
         // TODO: sanity checks on configuration (is there a market?)
     }
 
     function _pull(UFixed18 amount) internal override {
-        USDC.pull(msg.sender, UFixed6Lib.from(amount, true));
+        usdc.pull(msg.sender, UFixed6Lib.from(amount, true));
     }
 
     function _push(UFixed18 amount) internal override {
-        USDC.push(msg.sender, UFixed6Lib.from(amount));
+        usdc.push(msg.sender, UFixed6Lib.from(amount));
     }
 
     function _collateral() internal override view returns (UFixed18) {
-        return UFixed18Lib.from(ATOKEN.balanceOf(address(this)));
+        return UFixed18Lib.from(aToken.balanceOf(address(this)));
     }
 
     function _assets() internal override view returns (UFixed18) {
-        return UFixed18Lib.from(USDC.balanceOf(address(this)));
+        return UFixed18Lib.from(usdc.balanceOf(address(this)));
     }
 
     function _update(UFixed18 collateral, UFixed18 target) internal virtual override {
         if (collateral.gt(target))
-            AAVE.withdraw(USDC, UFixed6Lib.from(collateral.sub(target)), address(this));
+            aave.withdraw(usdc, UFixed6Lib.from(collateral.sub(target)), address(this));
         if (target.gt(collateral))
-            AAVE.deposit(USDC, UFixed6Lib.from(target.sub(collateral)), address(this), 0);
+            aave.deposit(usdc, UFixed6Lib.from(target.sub(collateral)), address(this), 0);
     }
 }
 

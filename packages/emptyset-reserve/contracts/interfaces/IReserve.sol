@@ -13,6 +13,7 @@ interface IReserve {
     event Mint(address indexed account, UFixed18 mintAmount, UFixed18 costAmount);
     event Redeem(address indexed account, UFixed18 costAmount, UFixed18 redeemAmount);
 
+    function dsu() external view returns (Token18);
     function mintPrice() external view returns (UFixed18);
     function redeemPrice() external view returns (UFixed18);
     function mint(UFixed18 amount) external returns (UFixed18 mintAmount);

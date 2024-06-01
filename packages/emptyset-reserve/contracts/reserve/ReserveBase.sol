@@ -17,18 +17,18 @@ abstract contract ReserveBase is IReserve, Ownable {
     event CoorindatorUpdated(address newCoordinator);
     event AllocationUpdated(UFixed18 newAllocation);
 
-    Token18 public immutable DSU; // solhint-disable-line var-name-mixedcase
+    Token18 public immutable dsu;
 
     address public coordinator;
     UFixed18 public allocation;
 
     constructor(Token18 dsu_) {
-        DSU = dsu_;
+        dsu = dsu_;
     }
 
     function __ReserveBase__initialize() internal onlyInitializer {
         if (owner() == address(0)) __Ownable__initialize();
-        if (IDSU(Token18.unwrap(DSU)).owner() != address(this)) IDSU(Token18.unwrap(DSU)).acceptOwnership();
+        if (IDSU(Token18.unwrap(dsu)).owner() != address(this)) IDSU(Token18.unwrap(dsu)).acceptOwnership();
     }
 
     function updateCoordinator(address newCoordinator) external onlyOwner {
@@ -49,7 +49,7 @@ abstract contract ReserveBase is IReserve, Ownable {
     }
 
     function redeemPrice() public view returns (UFixed18) {
-        UFixed18 totalSupply = UFixed18.wrap(IDSU(Token18.unwrap(DSU)).totalSupply()); // TODO: move to root
+        UFixed18 totalSupply = UFixed18.wrap(IDSU(Token18.unwrap(dsu)).totalSupply()); // TODO: move to root
         return _assets().add(_collateral()).div(totalSupply).min(UFixed18Lib.ONE);
     }
 
@@ -57,11 +57,11 @@ abstract contract ReserveBase is IReserve, Ownable {
         _pull(amount);
         _allocate(UFixed18Lib.ZERO);
         mintAmount = _mint(amount);
-        DSU.push(msg.sender, mintAmount);
+        dsu.push(msg.sender, mintAmount);
     }
 
     function redeem(UFixed18 amount) external returns (UFixed18 redemptionAmount) {
-        DSU.pull(msg.sender, amount);
+        dsu.pull(msg.sender, amount);
         redemptionAmount = _redeem(amount);
         _allocate(redemptionAmount);
         _push(redemptionAmount);
@@ -70,14 +70,14 @@ abstract contract ReserveBase is IReserve, Ownable {
     function _mint(UFixed18 amount) internal returns (UFixed18 mintAmount) {
         mintAmount = amount.mul(mintPrice());
 
-        IDSU(Token18.unwrap(DSU)).mint(UFixed18.unwrap(amount));
+        IDSU(Token18.unwrap(dsu)).mint(UFixed18.unwrap(amount));
         emit Mint(msg.sender, mintAmount, amount);
     }
 
     function _redeem(UFixed18 amount) internal returns (UFixed18 redemptionAmount) {
         redemptionAmount = amount.mul(redeemPrice());
 
-        IDSU(Token18.unwrap(DSU)).burn(UFixed18.unwrap(amount));
+        IDSU(Token18.unwrap(dsu)).burn(UFixed18.unwrap(amount));
         emit Redeem(msg.sender, amount, redemptionAmount);
     }
 
