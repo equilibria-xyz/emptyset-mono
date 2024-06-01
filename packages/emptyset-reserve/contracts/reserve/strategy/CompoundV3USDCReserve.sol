@@ -39,9 +39,11 @@ contract CompoundV3USDCReserve is ReserveBase {
         return UFixed18Lib.from(USDC.balanceOf(address(this)));
     }
 
-    function _allocate(UFixed18 amount) internal virtual override {
-        if (amount.isZero()) COMPOUND.supply(USDC, UFixed6Lib.from(_assets()));
-        else COMPOUND.withdraw(USDC, UFixed6Lib.from(amount));
+    function _update(UFixed18 collateral, UFixed18 target) internal override {
+        if (collateral.gt(target))
+            COMPOUND.withdraw(USDC, UFixed6Lib.from(collateral.sub(target)));
+        if (target.gt(collateral))
+            COMPOUND.supply(USDC, UFixed6Lib.from(target.sub(collateral)));
     }
 }
 

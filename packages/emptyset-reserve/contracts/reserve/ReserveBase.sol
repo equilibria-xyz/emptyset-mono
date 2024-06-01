@@ -4,23 +4,44 @@ pragma solidity 0.8.17;
 import { DSU as IDSU } from "@emptyset/dsu/contracts/DSU.sol";
 import { Token18 } from "@equilibria/root/token/types/Token18.sol";
 import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.sol";
-import { Initializable } from "@equilibria/root/attribute/Initializable.sol";
+import { Ownable } from "@equilibria/root/attribute/Ownable.sol";
 import { IReserve } from "../interfaces/IReserve.sol";
 
 // TODO: natspec
-// TODO: aave impl
 // TODO: owner hook to withdraw excess
 
-abstract contract ReserveBase is IReserve, Initializable {
+abstract contract ReserveBase is IReserve, Ownable {
+    error ReserveBaseNotCoordinatorError();
+    error ReserveBaseInvalidAllocationError();
+
+    event CoorindatorUpdated(address newCoordinator);
+    event AllocationUpdated(UFixed18 newAllocation);
+
     Token18 public immutable DSU; // solhint-disable-line var-name-mixedcase
+
+    address public coordinator;
+    UFixed18 public allocation;
 
     constructor(Token18 dsu_) {
         DSU = dsu_;
     }
 
     function __ReserveBase__initialize() internal onlyInitializer {
-        IDSU dsu_ = IDSU(Token18.unwrap(DSU));
-        if (dsu_.owner() != address(this)) dsu_.acceptOwnership();
+        if (owner() == address(0)) __Ownable__initialize();
+        if (IDSU(Token18.unwrap(DSU)).owner() != address(this)) IDSU(Token18.unwrap(DSU)).acceptOwnership();
+    }
+
+    function updateCoordinator(address newCoordinator) external onlyOwner {
+        coordinator = newCoordinator;
+        emit CoorindatorUpdated(newCoordinator);
+    }
+
+    function updateAllocation(UFixed18 newAllocation) external {
+        if (msg.sender != coordinator && msg.sender != owner()) revert ReserveBaseNotCoordinatorError();
+        if (newAllocation.gt(UFixed18Lib.ONE)) revert ReserveBaseInvalidAllocationError();
+
+        allocation = newAllocation;
+        emit AllocationUpdated(newAllocation);
     }
 
     function mintPrice() public pure returns (UFixed18) {
@@ -33,14 +54,14 @@ abstract contract ReserveBase is IReserve, Initializable {
     }
 
     function mint(UFixed18 amount) external returns (UFixed18 mintAmount) {
-        _pull(amount); // TODO: these pulls / push don't differentiate?
+        _pull(amount);
         _allocate(UFixed18Lib.ZERO);
         mintAmount = _mint(amount);
-        _push(mintAmount);
+        DSU.push(msg.sender, mintAmount);
     }
 
     function redeem(UFixed18 amount) external returns (UFixed18 redemptionAmount) {
-        _pull(amount); // TODO: these pulls / push don't differentiate?
+        DSU.pull(msg.sender, amount);
         redemptionAmount = _redeem(amount);
         _allocate(redemptionAmount);
         _push(redemptionAmount);
@@ -60,6 +81,17 @@ abstract contract ReserveBase is IReserve, Initializable {
         emit Redeem(msg.sender, amount, redemptionAmount);
     }
 
+    function _compute(UFixed18 amount) private view returns (UFixed18 collateral, UFixed18 target) {
+        UFixed18 assets = _assets();
+        collateral = _collateral();
+        target = assets.add(collateral).sub(amount).mul(allocation);
+    }
+
+    function _allocate(UFixed18 amount) private {
+        (UFixed18 collateral, UFixed18 target) = _compute(amount);
+        _update(collateral, target);
+    }
+
     /// @dev Quantity of assets unallocated in the reserve (ex. USDC)
     function _assets() internal virtual view returns (UFixed18);
 
@@ -72,6 +104,6 @@ abstract contract ReserveBase is IReserve, Initializable {
     /// @dev Push assets to the caller
     function _push(UFixed18 amount) internal virtual;
 
-    /// @dev Perform allocation in the underlying strategy, setting aside `amount` assets for withdrawal
-    function _allocate(UFixed18 amount) internal virtual;
+    /// @dev Update the reserve's allocation in the underlying strategy from `collateral` to `target`
+    function _update(UFixed18 collateral, UFixed18 target) internal virtual;
 }

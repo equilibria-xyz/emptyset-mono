@@ -7,7 +7,7 @@ import { UFixed6, UFixed6Lib } from "@equilibria/root/number/types/UFixed6.sol";
 import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.sol";
 import { ReserveBase } from "../ReserveBase.sol";
 
-contract CompoundV3USDCReserve is ReserveBase {
+contract NoopUSDCReserve is ReserveBase {
     Token6 public immutable USDC; // solhint-disable-line var-name-mixedcase
 
     constructor(Token18 dsu_, Token6 usdc_) ReserveBase(dsu_) {
@@ -30,7 +30,7 @@ contract CompoundV3USDCReserve is ReserveBase {
         return UFixed18Lib.from(USDC.balanceOf(address(this)));
     }
 
-    function _allocate(UFixed18) internal pure override {
+    function _update(UFixed18, UFixed18) internal pure override {
         return;
     }
 }

@@ -41,9 +41,11 @@ contract AaveV3USDCReserve is ReserveBase {
         return UFixed18Lib.from(USDC.balanceOf(address(this)));
     }
 
-    function _allocate(UFixed18 amount) internal virtual override {
-        if (amount.isZero()) AAVE.deposit(USDC, UFixed6Lib.from(_assets()), address(this), 0);
-        else AAVE.withdraw(USDC, UFixed6Lib.from(amount), address(this));
+    function _update(UFixed18 collateral, UFixed18 target) internal virtual override {
+        if (collateral.gt(target))
+            AAVE.withdraw(USDC, UFixed6Lib.from(collateral.sub(target)), address(this));
+        if (target.gt(collateral))
+            AAVE.deposit(USDC, UFixed6Lib.from(target.sub(collateral)), address(this), 0);
     }
 }
 
