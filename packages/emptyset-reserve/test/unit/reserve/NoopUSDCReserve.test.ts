@@ -3,7 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect, use } from 'chai'
 import { utils } from 'ethers'
 import HRE from 'hardhat'
-import { DSU, IERC20Metadata, SimpleReserve, SimpleReserve__factory } from '../../../types/generated'
+import { DSU, IERC20Metadata, NoopUSDCReserve, NoopUSDCReserve__factory } from '../../../types/generated'
 
 const { ethers } = HRE
 use(smock.matchers)
@@ -11,7 +11,7 @@ use(smock.matchers)
 describe('SimpleReserve', () => {
   let owner: SignerWithAddress
   let user: SignerWithAddress
-  let reserve: SimpleReserve
+  let reserve: NoopUSDCReserve
   let usdc: FakeContract<IERC20Metadata>
   let dsu: FakeContract<DSU>
 
@@ -24,13 +24,13 @@ describe('SimpleReserve', () => {
     dsu.decimals.returns(18)
     usdc.decimals.returns(6)
 
-    reserve = await new SimpleReserve__factory(owner).deploy(dsu.address, usdc.address)
+    reserve = await new NoopUSDCReserve__factory(owner).deploy(dsu.address, usdc.address)
   })
 
   describe('#constructor', () => {
     it('constructs correctly', async () => {
-      expect(await reserve.DSU()).to.equal(dsu.address)
-      expect(await reserve.USDC()).to.equal(usdc.address)
+      expect(await reserve.dsu()).to.equal(dsu.address)
+      expect(await reserve.usdc()).to.equal(usdc.address)
     })
   })
 
@@ -58,6 +58,12 @@ describe('SimpleReserve', () => {
   describe('#redeemPrice', () => {
     it('returns ONE', async () => {
       expect(await reserve.redeemPrice()).to.equal(utils.parseEther('1'))
+    })
+  })
+
+  describe('#mintPrice', () => {
+    it('returns ONE', async () => {
+      expect(await reserve.mintPrice()).to.equal(utils.parseEther('1'))
     })
   })
 
@@ -99,6 +105,9 @@ describe('SimpleReserve', () => {
       dsu.burn.whenCalledWith(amount).returns(true)
       usdc.transfer.whenCalledWith(user.address, 10e6).returns(true)
 
+      dsu.totalSupply.whenCalledWith().returns(amount)
+      usdc.balanceOf.whenCalledWith(reserve.address).returns(10e6)
+
       await expect(reserve.connect(user).redeem(amount))
         .to.emit(reserve, 'Redeem')
         .withArgs(user.address, amount, amount)
@@ -114,6 +123,9 @@ describe('SimpleReserve', () => {
       dsu.transferFrom.whenCalledWith(user.address, reserve.address, amount).returns(true)
       dsu.burn.whenCalledWith(amount).returns(true)
       usdc.transfer.whenCalledWith(user.address, 10e6).returns(true)
+
+      dsu.totalSupply.whenCalledWith().returns(amount)
+      usdc.balanceOf.whenCalledWith(reserve.address).returns(10e6 + 1)
 
       await expect(reserve.connect(user).redeem(amount))
         .to.emit(reserve, 'Redeem')

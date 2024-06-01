@@ -33,12 +33,12 @@ contract AaveV3USDCReserve is ReserveBase {
         usdc.push(msg.sender, UFixed6Lib.from(amount));
     }
 
-    function _collateral() internal override view returns (UFixed18) {
-        return UFixed18Lib.from(aToken.balanceOf(address(this)));
+    function _unallocated() internal override view returns (UFixed18) {
+        return UFixed18Lib.from(usdc.balanceOf(address(this)));
     }
 
-    function _assets() internal override view returns (UFixed18) {
-        return UFixed18Lib.from(usdc.balanceOf(address(this)));
+    function _allocated() internal override view returns (UFixed18) {
+        return UFixed18Lib.from(aToken.balanceOf(address(this)));
     }
 
     function _update(UFixed18 collateral, UFixed18 target) internal virtual override {

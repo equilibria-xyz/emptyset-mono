@@ -1,9 +1,9 @@
 import { expect } from 'chai'
 import HRE from 'hardhat'
-import { constants, utils } from 'ethers'
+import { constants, utils, BigNumber } from 'ethers'
 import {
-  SimpleReserve,
-  SimpleReserve__factory,
+  NoopUSDCReserve,
+  NoopUSDCReserve__factory,
   IERC20Metadata,
   IERC20Metadata__factory,
   DSU,
@@ -18,11 +18,13 @@ const { ethers, deployments } = HRE
 const USDC_HOLDER_ADDRESS = '0x1b7baa734c00298b9429b518d621753bb0f6eff2'
 const DSU_CURRENT_OWNER = '0xD05aCe63789cCb35B9cE71d01e4d632a0486Da4B'
 
-describe('SimpleReserve', () => {
+describe('NoopUSDCReserve', () => {
   let owner: SignerWithAddress
   let user: SignerWithAddress
   let usdcHolder: SignerWithAddress
-  let reserve: SimpleReserve
+  let originalReserveDSU: BigNumber
+  let originalReserveUSDC: BigNumber
+  let reserve: NoopUSDCReserve
   let dsu: DSU
   let usdc: IERC20Metadata
 
@@ -32,17 +34,24 @@ describe('SimpleReserve', () => {
     dsu = DSU__factory.connect((await deployments.get('DSU')).address, owner)
     usdc = IERC20Metadata__factory.connect((await deployments.get('USDC')).address, owner)
 
-    reserve = await new SimpleReserve__factory(owner).deploy(dsu.address, usdc.address)
+    reserve = await new NoopUSDCReserve__factory(owner).deploy(dsu.address, usdc.address)
 
     // Transfer DSU ownership to new Reserve
     const dsuOwnerSigner = await impersonate.impersonateWithBalance(DSU_CURRENT_OWNER, utils.parseEther('10'))
+
     await dsu.connect(dsuOwnerSigner).transferOwnership(reserve.address)
+    await reserve.initialize()
 
     await dsu.connect(user).approve(reserve.address, constants.MaxUint256)
     await usdc.connect(user).approve(reserve.address, constants.MaxUint256)
 
     usdcHolder = await impersonate.impersonateWithBalance(USDC_HOLDER_ADDRESS, utils.parseEther('10'))
     await usdc.connect(usdcHolder).transfer(user.address, 1000e6)
+
+    // initial reserve assets and strategy
+    originalReserveDSU = await dsu.totalSupply()
+    originalReserveUSDC = originalReserveDSU.sub(1).div(1e12).add(1) // round up to nearest 1e12
+    await usdc.connect(usdcHolder).transfer(reserve.address, originalReserveUSDC)
   }
 
   beforeEach(async () => {
@@ -51,8 +60,14 @@ describe('SimpleReserve', () => {
 
   describe('#constructor', () => {
     it('constructs correctly', async () => {
-      expect(await reserve.DSU()).to.equal(dsu.address)
-      expect(await reserve.USDC()).to.equal(usdc.address)
+      expect(await reserve.dsu()).to.equal(dsu.address)
+      expect(await reserve.usdc()).to.equal(usdc.address)
+    })
+  })
+
+  describe('#mintPrice', () => {
+    it('returns ONE', async () => {
+      expect(await reserve.mintPrice()).to.equal(utils.parseEther('1'))
     })
   })
 
@@ -75,8 +90,10 @@ describe('SimpleReserve', () => {
         .to.emit(reserve, 'Mint') // Reserve Mint
         .withArgs(user.address, amount, amount)
 
+      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(amount))
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
       expect(await dsu.balanceOf(user.address)).to.equal(amount)
+      expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
     })
 
     it('pulls USDC from the sender, wraps it as DSU with rounding', async () => {
@@ -92,8 +109,10 @@ describe('SimpleReserve', () => {
         .to.emit(reserve, 'Mint') // Reserve Mint
         .withArgs(user.address, amount, amount)
 
+      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('10')))
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
       expect(await dsu.balanceOf(user.address)).to.equal(amount)
+      expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
     })
   })
 
@@ -114,6 +133,11 @@ describe('SimpleReserve', () => {
         .withArgs(reserve.address, user.address, 10e6)
         .to.emit(reserve, 'Redeem') // Reserve Redeem
         .withArgs(user.address, amount, amount)
+
+      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('1')))
+      expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
+      expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('1'))
+      expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('1')))
     })
 
     it('pulls DSU from the sender, unwraps it to USDC with roundng', async () => {
@@ -128,6 +152,11 @@ describe('SimpleReserve', () => {
         .withArgs(reserve.address, user.address, 10e6)
         .to.emit(reserve, 'Redeem') // Reserve Redeem
         .withArgs(user.address, amount, amount)
+
+      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('1')))
+      expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
+      expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('11').sub(amount))
+      expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('11')).sub(amount))
     })
   })
 })

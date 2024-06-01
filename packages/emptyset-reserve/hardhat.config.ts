@@ -20,8 +20,8 @@ const config = defaultConfig({
   },
   dependencyPaths: [
     '@emptyset/dsu/contracts/DSU.sol',
-    '@equilibria/root/control/unstructured/CrossChainOwner/UCrossChainOwner_Arbitrum.sol',
-    '@equilibria/root/control/unstructured/CrossChainOwner/UCrossChainOwner_Optimism.sol',
+    '@equilibria/root/attribute/CrossChainOwner/CrossChainOwner_Arbitrum.sol',
+    '@equilibria/root/attribute/CrossChainOwner/CrossChainOwner_Optimism.sol',
     '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol',
     '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol',
   ],
