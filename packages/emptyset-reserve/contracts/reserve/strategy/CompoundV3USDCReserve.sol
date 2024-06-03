@@ -23,6 +23,8 @@ contract CompoundV3USDCReserve is ICompoundV3USDCReserve, ReserveBase {
     constructor(Token18 dsu_, Token6 usdc_, ICompoundV3Market compound_) ReserveBase(dsu_) {
         usdc = usdc_;
         compound = compound_;
+
+        if (!compound.baseToken().eq(usdc)) revert CompoundV3USDCReserveInvalidMarketError();
     }
 
     /// @notice Initializes the new CompoundV3USDCReserve
@@ -30,7 +32,6 @@ contract CompoundV3USDCReserve is ICompoundV3USDCReserve, ReserveBase {
         __ReserveBase__initialize();
 
         usdc.approve(address(compound));
-        // TODO: sanity checks on configuration (is there a market?)
     }
 
     /// @inheritdoc ReserveBase
