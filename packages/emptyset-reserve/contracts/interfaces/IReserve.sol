@@ -12,6 +12,7 @@ import "@equilibria/root/token/types/Token6.sol";
 interface IReserve {
     event Mint(address indexed account, UFixed18 mintAmount, UFixed18 costAmount);
     event Redeem(address indexed account, UFixed18 costAmount, UFixed18 redeemAmount);
+    event Issue(address indexed account, UFixed18 amount);
 
     function dsu() external view returns (Token18);
     function assets() external view returns (UFixed18);
@@ -19,4 +20,5 @@ interface IReserve {
     function redeemPrice() external view returns (UFixed18);
     function mint(UFixed18 amount) external returns (UFixed18 mintAmount);
     function redeem(UFixed18 amount) external returns (UFixed18 redemptionAmount);
+    function issue(UFixed18 amount) external;
 }

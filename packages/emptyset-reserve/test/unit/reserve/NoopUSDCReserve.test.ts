@@ -1,22 +1,24 @@
 import { FakeContract, smock } from '@defi-wonderland/smock'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect, use } from 'chai'
-import { utils } from 'ethers'
+import { utils, constants } from 'ethers'
 import HRE from 'hardhat'
 import { DSU, IERC20Metadata, NoopUSDCReserve, NoopUSDCReserve__factory } from '../../../types/generated'
+import { impersonate } from '../../../../common/testutil'
 
 const { ethers } = HRE
 use(smock.matchers)
 
-describe('SimpleReserve', () => {
+describe('NoopUSDCReserve', () => {
   let owner: SignerWithAddress
   let user: SignerWithAddress
+  let coordinator: SignerWithAddress
   let reserve: NoopUSDCReserve
   let usdc: FakeContract<IERC20Metadata>
   let dsu: FakeContract<DSU>
 
   beforeEach(async () => {
-    ;[owner, user] = await ethers.getSigners()
+    ;[owner, user, coordinator] = await ethers.getSigners()
 
     usdc = await smock.fake<IERC20Metadata>('IERC20Metadata')
     dsu = await smock.fake<DSU>('DSU')
@@ -40,6 +42,15 @@ describe('SimpleReserve', () => {
       await expect(reserve.initialize()).to.not.be.reverted
     })
 
+    it('does nothing if already has owner', async () => {
+      const zeroAddressSigner = await impersonate.impersonateWithBalance(constants.AddressZero, utils.parseEther('10'))
+
+      await reserve.connect(zeroAddressSigner).updatePendingOwner(owner.address)
+      await reserve.connect(owner).acceptOwner()
+      await expect(reserve.connect(user).initialize()).to.not.be.reverted
+      expect(await reserve.owner()).to.equal(owner.address)
+    })
+
     it('accepts ownership if not DSU owner', async () => {
       dsu.owner.returns(dsu.address)
       dsu.acceptOwnership.whenCalledWith().returns()
@@ -52,6 +63,66 @@ describe('SimpleReserve', () => {
       dsu.acceptOwnership.reverts('Ownable2Step: caller is not the new owner')
       await expect(reserve.initialize()).to.be.reverted
       expect(dsu.acceptOwnership).to.have.been.called
+    })
+  })
+
+  describe('#updateCoordinator', () => {
+    beforeEach(async () => {
+      await reserve.connect(owner).initialize()
+    })
+
+    it('updates the coordinator address', async () => {
+      await expect(reserve.connect(owner).updateCoordinator(coordinator.address))
+        .to.emit(reserve, 'CoordinatorUpdated')
+        .withArgs(coordinator.address)
+
+      expect(await reserve.coordinator()).to.equal(coordinator.address)
+    })
+
+    it('reverts if not owner', async () => {
+      await expect(reserve.connect(user).updateCoordinator(coordinator.address)).to.be.revertedWithCustomError(
+        reserve,
+        'OwnableNotOwnerError',
+      )
+      expect(await reserve.coordinator()).to.equal(constants.AddressZero)
+    })
+  })
+
+  describe('#updateAllocation', () => {
+    beforeEach(async () => {
+      await reserve.connect(owner).initialize()
+      await reserve.connect(owner).updateCoordinator(coordinator.address)
+    })
+
+    it('updates the allocation amount', async () => {
+      await expect(reserve.connect(coordinator).updateAllocation(utils.parseEther('0.5')))
+        .to.emit(reserve, 'AllocationUpdated')
+        .withArgs(utils.parseEther('0.5'))
+
+      expect(await reserve.allocation()).to.equal(utils.parseEther('0.5'))
+    })
+
+    it('reverts if allocation too large', async () => {
+      await expect(
+        reserve.connect(coordinator).updateAllocation(utils.parseEther('1').add(1)),
+      ).to.be.revertedWithCustomError(reserve, 'ReserveBaseInvalidAllocationError')
+      expect(await reserve.allocation()).to.equal(0)
+    })
+
+    it('reverts if not coordinator (user)', async () => {
+      await expect(reserve.connect(user).updateAllocation(utils.parseEther('0.5'))).to.be.revertedWithCustomError(
+        reserve,
+        'ReserveBaseNotCoordinatorError',
+      )
+      expect(await reserve.allocation()).to.equal(0)
+    })
+
+    it('reverts if not coordinator (owner)', async () => {
+      await expect(reserve.connect(owner).updateAllocation(utils.parseEther('0.5'))).to.be.revertedWithCustomError(
+        reserve,
+        'ReserveBaseNotCoordinatorError',
+      )
+      expect(await reserve.allocation()).to.equal(0)
     })
   })
 
@@ -134,6 +205,32 @@ describe('SimpleReserve', () => {
       expect(dsu.transferFrom).to.have.been.calledWith(user.address, reserve.address, amount)
       expect(dsu.burn).to.have.been.calledWith(amount)
       expect(usdc.transfer).to.have.been.calledWith(user.address, 10e6)
+    })
+  })
+
+  describe('#issue', () => {
+    beforeEach(async () => {
+      await reserve.connect(owner).initialize()
+    })
+
+    it('mints DSU up to collateral requirement', async () => {
+      const amount = utils.parseEther('10')
+
+      dsu.transfer.whenCalledWith(owner.address, amount).returns(true)
+      dsu.mint.whenCalledWith(amount).returns(true)
+
+      dsu.totalSupply.whenCalledWith().returns(utils.parseEther('10')) // 10 DSU
+      usdc.balanceOf.whenCalledWith(reserve.address).returns(10e6 + 10e6) // 20 USDC
+
+      await expect(reserve.connect(owner).issue(amount)).to.emit(reserve, 'Issue').withArgs(owner.address, amount)
+
+      expect(dsu.transfer).to.have.been.calledWith(owner.address, amount)
+      expect(dsu.mint).to.have.been.calledWith(amount)
+    })
+
+    it('reverts if not owner', async () => {
+      const amount = utils.parseEther('10')
+      await expect(reserve.connect(user).issue(amount)).to.be.revertedWithCustomError(reserve, 'OwnableNotOwnerError')
     })
   })
 })

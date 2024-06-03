@@ -12,6 +12,7 @@ import {
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { impersonate } from '../../../../common/testutil'
+import { parse } from 'path'
 
 const { ethers, deployments } = HRE
 
@@ -21,15 +22,17 @@ const DSU_CURRENT_OWNER = '0xD05aCe63789cCb35B9cE71d01e4d632a0486Da4B'
 describe('NoopUSDCReserve', () => {
   let owner: SignerWithAddress
   let user: SignerWithAddress
+  let coordinator: SignerWithAddress
   let usdcHolder: SignerWithAddress
   let originalReserveDSU: BigNumber
   let originalReserveUSDC: BigNumber
+  let originalOwnerUSDC: BigNumber
   let reserve: NoopUSDCReserve
   let dsu: DSU
   let usdc: IERC20Metadata
 
   const beforeFixture = async () => {
-    ;[owner, user] = await ethers.getSigners()
+    ;[owner, user, coordinator] = await ethers.getSigners()
 
     dsu = DSU__factory.connect((await deployments.get('DSU')).address, owner)
     usdc = IERC20Metadata__factory.connect((await deployments.get('USDC')).address, owner)
@@ -52,6 +55,7 @@ describe('NoopUSDCReserve', () => {
     originalReserveDSU = await dsu.totalSupply()
     originalReserveUSDC = originalReserveDSU.sub(1).div(1e12).add(1) // round up to nearest 1e12
     await usdc.connect(usdcHolder).transfer(reserve.address, originalReserveUSDC)
+    originalOwnerUSDC = await usdc.balanceOf(owner.address)
   }
 
   beforeEach(async () => {
@@ -74,6 +78,61 @@ describe('NoopUSDCReserve', () => {
   describe('#redeemPrice', () => {
     it('returns ONE', async () => {
       expect(await reserve.redeemPrice()).to.equal(utils.parseEther('1'))
+    })
+  })
+
+  describe('#updateCoordinator', () => {
+    it('updates the coordinator address', async () => {
+      await expect(reserve.connect(owner).updateCoordinator(coordinator.address))
+        .to.emit(reserve, 'CoordinatorUpdated')
+        .withArgs(coordinator.address)
+
+      expect(await reserve.coordinator()).to.equal(coordinator.address)
+    })
+
+    it('reverts if not owner', async () => {
+      await expect(reserve.connect(user).updateCoordinator(coordinator.address)).to.be.revertedWithCustomError(
+        reserve,
+        'OwnableNotOwnerError',
+      )
+      expect(await reserve.coordinator()).to.equal(constants.AddressZero)
+    })
+  })
+
+  describe('#updateAllocation', () => {
+    beforeEach(async () => {
+      await reserve.connect(owner).updateCoordinator(coordinator.address)
+    })
+
+    it('updates the allocation amount', async () => {
+      await expect(reserve.connect(coordinator).updateAllocation(utils.parseEther('0.5')))
+        .to.emit(reserve, 'AllocationUpdated')
+        .withArgs(utils.parseEther('0.5'))
+
+      expect(await reserve.allocation()).to.equal(utils.parseEther('0.5'))
+    })
+
+    it('reverts if allocation too large', async () => {
+      await expect(
+        reserve.connect(coordinator).updateAllocation(utils.parseEther('1').add(1)),
+      ).to.be.revertedWithCustomError(reserve, 'ReserveBaseInvalidAllocationError')
+      expect(await reserve.allocation()).to.equal(0)
+    })
+
+    it('reverts if not coordinator (user)', async () => {
+      await expect(reserve.connect(user).updateAllocation(utils.parseEther('0.5'))).to.be.revertedWithCustomError(
+        reserve,
+        'ReserveBaseNotCoordinatorError',
+      )
+      expect(await reserve.allocation()).to.equal(0)
+    })
+
+    it('reverts if not coordinator (owner)', async () => {
+      await expect(reserve.connect(owner).updateAllocation(utils.parseEther('0.5'))).to.be.revertedWithCustomError(
+        reserve,
+        'ReserveBaseNotCoordinatorError',
+      )
+      expect(await reserve.allocation()).to.equal(0)
     })
   })
 
@@ -157,6 +216,39 @@ describe('NoopUSDCReserve', () => {
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
       expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('11').sub(amount))
       expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('11')).sub(amount))
+    })
+  })
+
+  describe('#issue', () => {
+    it('mints DSU up to collateral requirement', async () => {
+      const amount = utils.parseEther('10')
+      await usdc.connect(usdcHolder).transfer(reserve.address, amount.div(1e12))
+
+      await expect(reserve.connect(owner).issue(amount))
+        .to.emit(dsu, 'Transfer') // DSU push to reserve
+        .withArgs(reserve.address, owner.address, amount)
+        .to.emit(reserve, 'Issue') // Reserve Issue
+        .withArgs(owner.address, amount)
+
+      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('10')))
+      expect(await usdc.balanceOf(owner.address)).to.equal(originalOwnerUSDC)
+      expect(await dsu.balanceOf(owner.address)).to.equal(utils.parseEther('10'))
+      expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('10')))
+    })
+
+    it('reverts if under collateral requirement', async () => {
+      const amount = utils.parseEther('10')
+      await usdc.connect(usdcHolder).transfer(reserve.address, amount.div(1e12))
+
+      await expect(reserve.connect(owner).issue(amount.add(utils.parseEther('1')))).to.be.revertedWithCustomError(
+        reserve,
+        'ReserveBaseInsufficientAssetsError',
+      )
+    })
+
+    it('reverts if not owner', async () => {
+      const amount = utils.parseEther('10')
+      await expect(reserve.connect(user).issue(amount)).to.be.revertedWithCustomError(reserve, 'OwnableNotOwnerError')
     })
   })
 })

@@ -8,13 +8,14 @@ import { Ownable } from "@equilibria/root/attribute/Ownable.sol";
 import { IReserve } from "../interfaces/IReserve.sol";
 
 // TODO: natspec
-// TODO: owner hook to withdraw excess
 
 abstract contract ReserveBase is IReserve, Ownable {
     error ReserveBaseNotCoordinatorError();
     error ReserveBaseInvalidAllocationError();
+    error ReserveBaseInsufficientAssetsError();
 
-    event CoorindatorUpdated(address newCoordinator);
+
+    event CoordinatorUpdated(address newCoordinator);
     event AllocationUpdated(UFixed18 newAllocation);
 
     Token18 public immutable dsu;
@@ -33,11 +34,10 @@ abstract contract ReserveBase is IReserve, Ownable {
 
     function updateCoordinator(address newCoordinator) external onlyOwner {
         coordinator = newCoordinator;
-        emit CoorindatorUpdated(newCoordinator);
+        emit CoordinatorUpdated(newCoordinator);
     }
 
-    function updateAllocation(UFixed18 newAllocation) external {
-        if (msg.sender != coordinator && msg.sender != owner()) revert ReserveBaseNotCoordinatorError();
+    function updateAllocation(UFixed18 newAllocation) external onlyCoordinator {
         if (newAllocation.gt(UFixed18Lib.ONE)) revert ReserveBaseInvalidAllocationError();
 
         allocation = newAllocation;
@@ -57,18 +57,23 @@ abstract contract ReserveBase is IReserve, Ownable {
         return assets().unsafeDiv(totalSupply).min(UFixed18Lib.ONE);
     }
 
-    function mint(UFixed18 amount) external returns (UFixed18 mintAmount) {
+    function mint(UFixed18 amount) external invariant returns (UFixed18 mintAmount) {
         _pull(amount);
         _allocate(UFixed18Lib.ZERO);
         mintAmount = _mint(amount);
         dsu.push(msg.sender, mintAmount);
     }
 
-    function redeem(UFixed18 amount) external returns (UFixed18 redemptionAmount) {
+    function redeem(UFixed18 amount) external invariant returns (UFixed18 redemptionAmount) {
         dsu.pull(msg.sender, amount);
         redemptionAmount = _redeem(amount);
         _allocate(redemptionAmount);
         _push(redemptionAmount);
+    }
+
+    function issue(UFixed18 amount) external invariant onlyOwner {
+        _issue(amount);
+        dsu.push(msg.sender, amount);
     }
 
     function _mint(UFixed18 amount) internal returns (UFixed18 mintAmount) {
@@ -83,6 +88,11 @@ abstract contract ReserveBase is IReserve, Ownable {
 
         IDSU(Token18.unwrap(dsu)).burn(UFixed18.unwrap(amount));
         emit Redeem(msg.sender, amount, redemptionAmount);
+    }
+
+    function _issue(UFixed18 amount) internal {
+        IDSU(Token18.unwrap(dsu)).mint(UFixed18.unwrap(amount));
+        emit Issue(msg.sender, amount);
     }
 
     function _compute(UFixed18 amount) private view returns (UFixed18 allocated, UFixed18 target) {
@@ -110,4 +120,19 @@ abstract contract ReserveBase is IReserve, Ownable {
 
     /// @dev Update the reserve's allocation in the underlying strategy from `collateral` to `target`
     function _update(UFixed18 allocated, UFixed18 target) internal virtual;
+
+    modifier onlyCoordinator {
+        if (msg.sender != coordinator) revert ReserveBaseNotCoordinatorError();
+
+        _;
+    }
+
+    modifier invariant {
+        UFixed18 initialRedeemPrice = redeemPrice();
+
+        _;
+
+        // redeemPrice must not decrease during the state execution
+        if (redeemPrice().lt(initialRedeemPrice)) revert ReserveBaseInsufficientAssetsError();
+    }
 }
