@@ -7,37 +7,39 @@ import { UFixed6, UFixed6Lib } from "@equilibria/root/number/types/UFixed6.sol";
 import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.sol";
 import { ReserveBase } from "../ReserveBase.sol";
 
-/// @title NoopUSDCReserve
-/// @notice A reserve strategy that does not deploy the underlying asset USDC
-contract NoopUSDCReserve is ReserveBase {
-    /// @dev The USDC token
-    Token6 public immutable usdc;
+/// @title NoopFiatReserve
+/// @notice A reserve with the following configuration:
+///         - Its underlying asset is a 6-decimal fiat token (ex. USDC, USDT)
+///         - Its strategy does not deploy the underlying asset
+contract NoopFiatReserve is ReserveBase {
+    /// @dev The fiat token
+    Token6 public immutable fiat;
 
-    /// @notice Constructs a new NoopUSDCReserve
+    /// @notice Constructs a new NoopFiatReserve
     /// @param dsu_ The DSU token
-    /// @param usdc_ The USDC token
-    constructor(Token18 dsu_, Token6 usdc_) ReserveBase(dsu_) {
-        usdc = usdc_;
+    /// @param fiat_ The fiat token
+    constructor(Token18 dsu_, Token6 fiat_) ReserveBase(dsu_) {
+        fiat = fiat_;
     }
 
-    /// @notice Initializes the new NoopUSDCReserve
+    /// @notice Initializes the new NoopFiatReserve
     function initialize() public virtual initializer(2) {
         __ReserveBase__initialize();
     }
 
     /// @inheritdoc ReserveBase
     function _pull(UFixed18 amount) internal override {
-        usdc.pull(msg.sender, UFixed6Lib.from(amount, true));
+        fiat.pull(msg.sender, UFixed6Lib.from(amount, true));
     }
 
     /// @inheritdoc ReserveBase
     function _push(UFixed18 amount) internal override {
-        usdc.push(msg.sender, UFixed6Lib.from(amount));
+        fiat.push(msg.sender, UFixed6Lib.from(amount));
     }
 
     /// @inheritdoc ReserveBase
     function _unallocated() internal override view returns (UFixed18) {
-        return UFixed18Lib.from(usdc.balanceOf(address(this)));
+        return UFixed18Lib.from(fiat.balanceOf(address(this)));
     }
 
     /// @inheritdoc ReserveBase

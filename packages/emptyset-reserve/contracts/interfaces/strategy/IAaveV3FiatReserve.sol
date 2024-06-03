@@ -5,10 +5,14 @@ import { UFixed6 } from "@equilibria/root/number/types/UFixed6.sol";
 import { Token6 } from "@equilibria/root/token/types/Token6.sol";
 import { IReserveBase } from "../IReserveBase.sol";
 
-/// @title IAaveV3USDCReserve
-/// @notice Interface for the AaveV3USDCReserve
-interface IAaveV3USDCReserve is IReserveBase {
-    function usdc() external view returns (Token6);
+/// @title IAaveV3FiatReserve
+/// @notice Interface for the AaveV3FiatReserve
+interface IAaveV3FiatReserve is IReserveBase {
+    /// @dev The fiat token is not supported by the supplied pool
+    /// sig: 0x8d1edd6e
+    error AaveV3FiatReserveInvalidPoolError();
+
+    function fiat() external view returns (Token6);
     function aave() external view returns (IAaveV3Pool);
     function aToken() external view returns (Token6);
     function initialize() external;
