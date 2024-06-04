@@ -35,8 +35,8 @@ const ARBITRUM_GOERLI_NODE_URL = process.env.ARBITRUM_GOERLI_NODE_URL || ''
 const BASE_GOERLI_NODE_URL = process.env.BASE_GOERLI_NODE_URL || ''
 const ARBITRUM_SEPOLIA_NODE_URL = process.env.ARBITRUM_SEPOLIA_NODE_URL || ''
 
-const FORK_ENABLED = process.env.FORK_ENABLED === 'true' || false
-const FORK_NETWORK = process.env.FORK_NETWORK || 'mainnet'
+export const FORK_ENABLED = process.env.FORK_ENABLED === 'true' || false
+export const FORK_NETWORK = process.env.FORK_NETWORK || 'mainnet'
 const FORK_BLOCK_NUMBER = process.env.FORK_BLOCK_NUMBER ? parseInt(process.env.FORK_BLOCK_NUMBER) : undefined
 
 const NODE_INTERVAL_MINING = process.env.NODE_INTERVAL_MINING ? parseInt(process.env.NODE_INTERVAL_MINING) : undefined
