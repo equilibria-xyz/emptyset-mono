@@ -16,8 +16,7 @@ import { parse } from 'path'
 
 const { ethers, deployments } = HRE
 
-const USDC_HOLDER_ADDRESS = '0x1b7baa734c00298b9429b518d621753bb0f6eff2'
-const DSU_CURRENT_OWNER = '0xD05aCe63789cCb35B9cE71d01e4d632a0486Da4B'
+const USDC_HOLDER_ADDRESS = '0xb38e8c17e38363af6ebdcb3dae12e0243582891d'
 
 describe('NoopUSDCReserve', () => {
   let owner: SignerWithAddress
@@ -40,7 +39,7 @@ describe('NoopUSDCReserve', () => {
     reserve = await new NoopUSDCReserve__factory(owner).deploy(dsu.address, usdc.address)
 
     // Transfer DSU ownership to new Reserve
-    const dsuOwnerSigner = await impersonate.impersonateWithBalance(DSU_CURRENT_OWNER, utils.parseEther('10'))
+    const dsuOwnerSigner = await impersonate.impersonateWithBalance(await dsu.owner(), utils.parseEther('10'))
 
     await dsu.connect(dsuOwnerSigner).transferOwnership(reserve.address)
     await reserve.initialize()
