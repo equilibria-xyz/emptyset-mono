@@ -149,123 +149,341 @@ describe('CompoundV3FiatReserve', () => {
   })
 
   describe('#mint', () => {
-    beforeEach(async () => {
-      await reserve.connect(owner).updateCoordinator(coordinator.address)
-      await reserve.connect(coordinator).updateAllocation(utils.parseEther('0.5'))
+    context('when allocation is 0', () => {
+      beforeEach(async () => {
+        await reserve.connect(owner).updateCoordinator(coordinator.address)
+        await reserve.connect(coordinator).updateAllocation(utils.parseEther('0'))
+      })
+
+      it('pulls USDC from the sender, wraps it as DSU', async () => {
+        const amount = utils.parseEther('10')
+        await expect(reserve.connect(user).mint(amount, { gasLimit: 3e6 }))
+          .to.emit(usdc, 'Transfer') // USDC pull from user
+          .withArgs(user.address, reserve.address, 10e6)
+          .to.emit(dsu, 'Transfer') // DSU Mint to Reserve
+          .withArgs(constants.AddressZero, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU push from reserve
+          .withArgs(reserve.address, user.address, amount)
+          .to.emit(reserve, 'Mint') // Reserve Mint
+          .withArgs(user.address, amount, amount)
+
+        expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(amount))
+        expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6))
+        expect(await compound.balanceOf(reserve.address)).to.equal(0)
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(amount)
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
+      })
+
+      it('pulls USDC from the sender, wraps it as DSU with rounding', async () => {
+        const amount = utils.parseEther('10').sub(1)
+
+        await expect(reserve.connect(user).mint(amount))
+          .to.emit(usdc, 'Transfer') // USDC pull from user
+          .withArgs(user.address, reserve.address, 10e6)
+          .to.emit(dsu, 'Transfer') // DSU Mint to Reserve
+          .withArgs(constants.AddressZero, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU push from reserve
+          .withArgs(reserve.address, user.address, amount)
+          .to.emit(reserve, 'Mint') // Reserve Mint
+          .withArgs(user.address, amount, amount)
+
+        expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('10')))
+        expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6))
+        expect(await compound.balanceOf(reserve.address)).to.equal(0)
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(amount)
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
+      })
     })
 
-    it('pulls USDC from the sender, wraps it as DSU', async () => {
-      const amount = utils.parseEther('10')
-      await expect(reserve.connect(user).mint(amount, { gasLimit: 3e6 }))
-        .to.emit(usdc, 'Transfer') // USDC pull from user
-        .withArgs(user.address, reserve.address, 10e6)
-        .to.emit(dsu, 'Transfer') // DSU Mint to Reserve
-        .withArgs(constants.AddressZero, reserve.address, amount)
-        .to.emit(dsu, 'Transfer') // DSU push from reserve
-        .withArgs(reserve.address, user.address, amount)
-        .to.emit(reserve, 'Mint') // Reserve Mint
-        .withArgs(user.address, amount, amount)
+    context('when allocation is 0.5', () => {
+      beforeEach(async () => {
+        await reserve.connect(owner).updateCoordinator(coordinator.address)
+        await reserve.connect(coordinator).updateAllocation(utils.parseEther('0.5'))
+      })
 
-      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(amount).sub(1e12)) // cToken rounding produces an instant loss of 1 (in USDC)
-      expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).add(1))
-      expect(await compound.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).sub(1)) // cToken rounding produces an instant loss of 1 (in USDC)
-      expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
-      expect(await dsu.balanceOf(user.address)).to.equal(amount)
-      expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
+      it('pulls USDC from the sender, wraps it as DSU', async () => {
+        const amount = utils.parseEther('10')
+        await expect(reserve.connect(user).mint(amount, { gasLimit: 3e6 }))
+          .to.emit(usdc, 'Transfer') // USDC pull from user
+          .withArgs(user.address, reserve.address, 10e6)
+          .to.emit(dsu, 'Transfer') // DSU Mint to Reserve
+          .withArgs(constants.AddressZero, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU push from reserve
+          .withArgs(reserve.address, user.address, amount)
+          .to.emit(reserve, 'Mint') // Reserve Mint
+          .withArgs(user.address, amount, amount)
+
+        expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(amount).sub(1e12)) // cToken rounding produces an instant loss of 1 (in USDC)
+        expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).add(1))
+        expect(await compound.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).sub(1)) // cToken rounding produces an instant loss of 1 (in USDC)
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(amount)
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
+      })
+
+      it('pulls USDC from the sender, wraps it as DSU with rounding', async () => {
+        const amount = utils.parseEther('10').sub(1)
+
+        await expect(reserve.connect(user).mint(amount))
+          .to.emit(usdc, 'Transfer') // USDC pull from user
+          .withArgs(user.address, reserve.address, 10e6)
+          .to.emit(dsu, 'Transfer') // DSU Mint to Reserve
+          .withArgs(constants.AddressZero, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU push from reserve
+          .withArgs(reserve.address, user.address, amount)
+          .to.emit(reserve, 'Mint') // Reserve Mint
+          .withArgs(user.address, amount, amount)
+
+        expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('10')).sub(1e12)) // cToken rounding produces an instant loss of 1 (in USDC)
+        expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).add(1))
+        expect(await compound.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).sub(1)) // cToken rounding produces an instant loss of 1 (in USDC)
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(amount)
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
+      })
     })
 
-    it('pulls USDC from the sender, wraps it as DSU with rounding', async () => {
-      const amount = utils.parseEther('10').sub(1)
+    context('when allocation is 1', () => {
+      beforeEach(async () => {
+        await reserve.connect(owner).updateCoordinator(coordinator.address)
+        await reserve.connect(coordinator).updateAllocation(utils.parseEther('1'))
+      })
 
-      await expect(reserve.connect(user).mint(amount))
-        .to.emit(usdc, 'Transfer') // USDC pull from user
-        .withArgs(user.address, reserve.address, 10e6)
-        .to.emit(dsu, 'Transfer') // DSU Mint to Reserve
-        .withArgs(constants.AddressZero, reserve.address, amount)
-        .to.emit(dsu, 'Transfer') // DSU push from reserve
-        .withArgs(reserve.address, user.address, amount)
-        .to.emit(reserve, 'Mint') // Reserve Mint
-        .withArgs(user.address, amount, amount)
+      it('pulls USDC from the sender, wraps it as DSU', async () => {
+        const amount = utils.parseEther('10')
+        await expect(reserve.connect(user).mint(amount, { gasLimit: 3e6 }))
+          .to.emit(usdc, 'Transfer') // USDC pull from user
+          .withArgs(user.address, reserve.address, 10e6)
+          .to.emit(dsu, 'Transfer') // DSU Mint to Reserve
+          .withArgs(constants.AddressZero, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU push from reserve
+          .withArgs(reserve.address, user.address, amount)
+          .to.emit(reserve, 'Mint') // Reserve Mint
+          .withArgs(user.address, amount, amount)
 
-      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('10')).sub(1e12)) // cToken rounding produces an instant loss of 1 (in USDC)
-      expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).add(1))
-      expect(await compound.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).sub(1)) // cToken rounding produces an instant loss of 1 (in USDC)
-      expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
-      expect(await dsu.balanceOf(user.address)).to.equal(amount)
-      expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
+        expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(amount).sub(1e12)) // cToken rounding produces an instant loss of 1 (in USDC)
+        expect(await usdc.balanceOf(reserve.address)).to.equal(0)
+        expect(await compound.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).sub(1)) // cToken rounding produces an instant loss of 1 (in USDC)
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(amount)
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
+      })
+
+      it('pulls USDC from the sender, wraps it as DSU with rounding', async () => {
+        const amount = utils.parseEther('10').sub(1)
+
+        await expect(reserve.connect(user).mint(amount))
+          .to.emit(usdc, 'Transfer') // USDC pull from user
+          .withArgs(user.address, reserve.address, 10e6)
+          .to.emit(dsu, 'Transfer') // DSU Mint to Reserve
+          .withArgs(constants.AddressZero, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU push from reserve
+          .withArgs(reserve.address, user.address, amount)
+          .to.emit(reserve, 'Mint') // Reserve Mint
+          .withArgs(user.address, amount, amount)
+
+        expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('10')).sub(1e12)) // cToken rounding produces an instant loss of 1 (in USDC)
+        expect(await usdc.balanceOf(reserve.address)).to.equal(0)
+        expect(await compound.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).sub(1)) // cToken rounding produces an instant loss of 1 (in USDC)
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(amount)
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
+      })
     })
   })
 
   describe('#redeem', () => {
-    beforeEach(async () => {
-      await reserve.connect(owner).updateCoordinator(coordinator.address)
-      await reserve.connect(coordinator).updateAllocation(utils.parseEther('0.5'))
+    context('when allocation is 0', () => {
+      beforeEach(async () => {
+        await reserve.connect(owner).updateCoordinator(coordinator.address)
+        await reserve.connect(coordinator).updateAllocation(utils.parseEther('0'))
 
-      await reserve.connect(user).mint(utils.parseEther('11'))
+        await reserve.connect(user).mint(utils.parseEther('11'))
+      })
+
+      it('pulls DSU from the sender, unwraps it to USDC', async () => {
+        const amount = utils.parseEther('10')
+
+        await expect(reserve.connect(user).redeem(amount))
+          .to.emit(dsu, 'Transfer') // DSU pull from user
+          .withArgs(user.address, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU burn
+          .withArgs(reserve.address, constants.AddressZero, amount)
+          .to.emit(usdc, 'Transfer') // USDC push from reserve
+          .withArgs(reserve.address, user.address, 10e6)
+          .to.emit(reserve, 'Redeem') // Reserve Redeem
+          .withArgs(user.address, amount, amount)
+
+        expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('1')))
+        expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(1e6))
+        expect(await compound.balanceOf(reserve.address)).to.equal(0)
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('1'))
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('1')))
+      })
+
+      it('pulls DSU from the sender, unwraps it to USDC with roundng', async () => {
+        const amount = utils.parseEther('10').add(1)
+
+        await expect(reserve.connect(user).redeem(amount))
+          .to.emit(dsu, 'Transfer') // DSU pull from user
+          .withArgs(user.address, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU burn
+          .withArgs(reserve.address, constants.AddressZero, amount)
+          .to.emit(usdc, 'Transfer') // USDC push from reserve
+          .withArgs(reserve.address, user.address, 10e6)
+          .to.emit(reserve, 'Redeem') // Reserve Redeem
+          .withArgs(user.address, amount, amount)
+
+        expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('1')))
+        expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(1e6))
+        expect(await compound.balanceOf(reserve.address)).to.equal(0)
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('11').sub(amount))
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('11')).sub(amount))
+      })
     })
 
-    it('pulls DSU from the sender, unwraps it to USDC', async () => {
-      const amount = utils.parseEther('10')
+    context('when allocation is 0.5', () => {
+      beforeEach(async () => {
+        await reserve.connect(owner).updateCoordinator(coordinator.address)
+        await reserve.connect(coordinator).updateAllocation(utils.parseEther('0.5'))
 
-      await expect(reserve.connect(user).redeem(amount))
-        .to.emit(dsu, 'Transfer') // DSU pull from user
-        .withArgs(user.address, reserve.address, amount)
-        .to.emit(dsu, 'Transfer') // DSU burn
-        .withArgs(reserve.address, constants.AddressZero, amount)
-        .to.emit(usdc, 'Transfer') // USDC push from reserve
-        .withArgs(reserve.address, user.address, 10e6)
-        .to.emit(reserve, 'Redeem') // Reserve Redeem
-        .withArgs(user.address, amount, amount)
+        await reserve.connect(user).mint(utils.parseEther('11'))
+      })
 
-      const interestAccrued = BigNumber.from(950) // flucuates depending on timestamp
+      it('pulls DSU from the sender, unwraps it to USDC', async () => {
+        const amount = utils.parseEther('10')
 
-      expect(await reserve.assets()).to.closeTo(
-        originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
-        10e12,
-      )
-      expect(await usdc.balanceOf(reserve.address)).to.closeTo(
-        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
-        10e12,
-      )
-      expect(await compound.balanceOf(reserve.address)).to.closeTo(
-        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
-        10e12,
-      )
-      expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
-      expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('1'))
-      expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('1')))
+        await expect(reserve.connect(user).redeem(amount))
+          .to.emit(dsu, 'Transfer') // DSU pull from user
+          .withArgs(user.address, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU burn
+          .withArgs(reserve.address, constants.AddressZero, amount)
+          .to.emit(usdc, 'Transfer') // USDC push from reserve
+          .withArgs(reserve.address, user.address, 10e6)
+          .to.emit(reserve, 'Redeem') // Reserve Redeem
+          .withArgs(user.address, amount, amount)
+
+        const interestAccrued = BigNumber.from(950) // flucuates depending on timestamp
+
+        expect(await reserve.assets()).to.closeTo(
+          originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
+          10e12,
+        )
+        expect(await usdc.balanceOf(reserve.address)).to.closeTo(
+          originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+          10e12,
+        )
+        expect(await compound.balanceOf(reserve.address)).to.closeTo(
+          originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+          10e12,
+        )
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('1'))
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('1')))
+      })
+
+      it('pulls DSU from the sender, unwraps it to USDC with roundng', async () => {
+        const amount = utils.parseEther('10').add(1)
+
+        await expect(reserve.connect(user).redeem(amount))
+          .to.emit(dsu, 'Transfer') // DSU pull from user
+          .withArgs(user.address, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU burn
+          .withArgs(reserve.address, constants.AddressZero, amount)
+          .to.emit(usdc, 'Transfer') // USDC push from reserve
+          .withArgs(reserve.address, user.address, 10e6)
+          .to.emit(reserve, 'Redeem') // Reserve Redeem
+          .withArgs(user.address, amount, amount)
+
+        const interestAccrued = BigNumber.from(950) // flucuates depending on timestamp
+
+        expect(await reserve.assets()).to.closeTo(
+          originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
+          10e12,
+        )
+        expect(await usdc.balanceOf(reserve.address)).to.closeTo(
+          originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+          10e12,
+        )
+        expect(await compound.balanceOf(reserve.address)).to.closeTo(
+          originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+          10e12,
+        )
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('11').sub(amount))
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('11')).sub(amount))
+      })
     })
 
-    it('pulls DSU from the sender, unwraps it to USDC with roundng', async () => {
-      const amount = utils.parseEther('10').add(1)
+    context('when allocation is 1', () => {
+      beforeEach(async () => {
+        await reserve.connect(owner).updateCoordinator(coordinator.address)
+        await reserve.connect(coordinator).updateAllocation(utils.parseEther('1'))
 
-      await expect(reserve.connect(user).redeem(amount))
-        .to.emit(dsu, 'Transfer') // DSU pull from user
-        .withArgs(user.address, reserve.address, amount)
-        .to.emit(dsu, 'Transfer') // DSU burn
-        .withArgs(reserve.address, constants.AddressZero, amount)
-        .to.emit(usdc, 'Transfer') // USDC push from reserve
-        .withArgs(reserve.address, user.address, 10e6)
-        .to.emit(reserve, 'Redeem') // Reserve Redeem
-        .withArgs(user.address, amount, amount)
+        await reserve.connect(user).mint(utils.parseEther('11'))
+      })
 
-      const interestAccrued = BigNumber.from(950) // flucuates depending on timestamp
+      it('pulls DSU from the sender, unwraps it to USDC', async () => {
+        const amount = utils.parseEther('10')
 
-      expect(await reserve.assets()).to.closeTo(
-        originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
-        10e12,
-      )
-      expect(await usdc.balanceOf(reserve.address)).to.closeTo(
-        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
-        10e12,
-      )
-      expect(await compound.balanceOf(reserve.address)).to.closeTo(
-        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
-        10e12,
-      )
-      expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
-      expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('11').sub(amount))
-      expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('11')).sub(amount))
+        await expect(reserve.connect(user).redeem(amount))
+          .to.emit(dsu, 'Transfer') // DSU pull from user
+          .withArgs(user.address, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU burn
+          .withArgs(reserve.address, constants.AddressZero, amount)
+          .to.emit(usdc, 'Transfer') // USDC push from reserve
+          .withArgs(reserve.address, user.address, 10e6)
+          .to.emit(reserve, 'Redeem') // Reserve Redeem
+          .withArgs(user.address, amount, amount)
+
+        const interestAccrued = BigNumber.from(1400) // flucuates depending on timestamp
+
+        expect(await reserve.assets()).to.closeTo(
+          originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
+          10e12,
+        )
+        expect(await usdc.balanceOf(reserve.address)).to.equal(0)
+        expect(await compound.balanceOf(reserve.address)).to.closeTo(
+          originalReserveUSDC.add(1e6).add(interestAccrued),
+          10e12,
+        )
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('1'))
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('1')))
+      })
+
+      it('pulls DSU from the sender, unwraps it to USDC with roundng', async () => {
+        const amount = utils.parseEther('10').add(1)
+
+        await expect(reserve.connect(user).redeem(amount))
+          .to.emit(dsu, 'Transfer') // DSU pull from user
+          .withArgs(user.address, reserve.address, amount)
+          .to.emit(dsu, 'Transfer') // DSU burn
+          .withArgs(reserve.address, constants.AddressZero, amount)
+          .to.emit(usdc, 'Transfer') // USDC push from reserve
+          .withArgs(reserve.address, user.address, 10e6)
+          .to.emit(reserve, 'Redeem') // Reserve Redeem
+          .withArgs(user.address, amount, amount)
+
+        const interestAccrued = BigNumber.from(1400) // flucuates depending on timestamp
+
+        expect(await reserve.assets()).to.closeTo(
+          originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
+          10e12,
+        )
+        expect(await usdc.balanceOf(reserve.address)).to.equal(0)
+        expect(await compound.balanceOf(reserve.address)).to.closeTo(
+          originalReserveUSDC.add(1e6).add(interestAccrued),
+          10e12,
+        )
+        expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
+        expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('11').sub(amount))
+        expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('11')).sub(amount))
+      })
     })
   })
 
