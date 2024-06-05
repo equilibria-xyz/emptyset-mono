@@ -14,13 +14,13 @@ import {
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { impersonate } from '../../../../common/testutil'
-import { parse } from 'path'
-import { currentBlockTimestamp, reset } from '../../../../common/testutil/time'
+import { reset } from '../../../../common/testutil/time'
 
 const { ethers, deployments, config } = HRE
 
 const USDC_HOLDER_ADDRESS = '0xb38e8c17e38363af6ebdcb3dae12e0243582891d'
 const COMPOUND_USDC_E_MARKET = '0xA5EDBDD9646f8dFF606d7448e414884C7d905dCA'
+const COMPOUND_USDC_MARKET = '0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf'
 
 describe('CompoundV3FiatReserve', () => {
   let owner: SignerWithAddress
@@ -53,10 +53,6 @@ describe('CompoundV3FiatReserve', () => {
 
     await dsu.connect(user).approve(reserve.address, constants.MaxUint256)
     await usdc.connect(user).approve(reserve.address, constants.MaxUint256)
-  }
-
-  beforeEach(async () => {
-    await loadFixture(beforeFixture)
 
     usdcHolder = await impersonate.impersonateWithBalance(USDC_HOLDER_ADDRESS, utils.parseEther('10'))
     await usdc.connect(usdcHolder).transfer(user.address, 1000e6)
@@ -66,12 +62,22 @@ describe('CompoundV3FiatReserve', () => {
     originalReserveUSDC = originalReserveDSU.sub(1).div(1e12).add(1) // round up to nearest 1e12
     await usdc.connect(usdcHolder).transfer(reserve.address, originalReserveUSDC)
     originalOwnerUSDC = await usdc.balanceOf(owner.address)
+  }
+
+  beforeEach(async () => {
+    await loadFixture(beforeFixture)
   })
 
   describe('#constructor', () => {
     it('constructs correctly', async () => {
       expect(await reserve.dsu()).to.equal(dsu.address)
       expect(await reserve.fiat()).to.equal(usdc.address)
+    })
+
+    it('reverts if incorrect market', async () => {
+      await expect(
+        new CompoundV3FiatReserve__factory(owner).deploy(dsu.address, usdc.address, COMPOUND_USDC_MARKET),
+      ).to.be.revertedWithCustomError(reserve, 'CompoundV3FiatReserveInvalidMarketError')
     })
   })
 

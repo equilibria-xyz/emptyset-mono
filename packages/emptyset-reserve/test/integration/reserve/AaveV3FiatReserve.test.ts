@@ -2,12 +2,16 @@ import { expect } from 'chai'
 import HRE from 'hardhat'
 import { constants, utils, BigNumber } from 'ethers'
 import {
-  NoopFiatReserve,
-  NoopFiatReserve__factory,
+  AaveV3FiatReserve,
+  AaveV3FiatReserve__factory,
   IERC20Metadata,
   IERC20Metadata__factory,
   DSU,
   DSU__factory,
+  IAaveV3Pool,
+  IAaveV3Pool__factory,
+  IERC20,
+  IERC20__factory,
 } from '../../../types/generated'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
@@ -17,8 +21,10 @@ import { reset } from '../../../../common/testutil/time'
 const { ethers, deployments, config } = HRE
 
 const USDC_HOLDER_ADDRESS = '0xb38e8c17e38363af6ebdcb3dae12e0243582891d'
+const AAVE_POOL = '0x794a61358D6845594F94dc1DB02A252b5b4814aD'
+const UNI_ADDRESS = '0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0'
 
-describe('NoopFiatReserve', () => {
+describe('AaveV3FiatReserve', () => {
   let owner: SignerWithAddress
   let user: SignerWithAddress
   let coordinator: SignerWithAddress
@@ -26,9 +32,11 @@ describe('NoopFiatReserve', () => {
   let originalReserveDSU: BigNumber
   let originalReserveUSDC: BigNumber
   let originalOwnerUSDC: BigNumber
-  let reserve: NoopFiatReserve
+  let reserve: AaveV3FiatReserve
   let dsu: DSU
   let usdc: IERC20Metadata
+  let aave: IAaveV3Pool
+  let aToken: IERC20
 
   const beforeFixture = async () => {
     await reset(config)
@@ -36,8 +44,10 @@ describe('NoopFiatReserve', () => {
 
     dsu = DSU__factory.connect((await deployments.get('DSU')).address, owner)
     usdc = IERC20Metadata__factory.connect((await deployments.get('USDC')).address, owner)
+    aave = IAaveV3Pool__factory.connect(AAVE_POOL, owner)
+    aToken = IERC20__factory.connect((await aave.getReserveData(usdc.address)).aTokenAddress, owner)
 
-    reserve = await new NoopFiatReserve__factory(owner).deploy(dsu.address, usdc.address)
+    reserve = await new AaveV3FiatReserve__factory(owner).deploy(dsu.address, usdc.address, AAVE_POOL)
 
     // Transfer DSU ownership to new Reserve
     const dsuOwnerSigner = await impersonate.impersonateWithBalance(await dsu.owner(), utils.parseEther('10'))
@@ -66,6 +76,12 @@ describe('NoopFiatReserve', () => {
     it('constructs correctly', async () => {
       expect(await reserve.dsu()).to.equal(dsu.address)
       expect(await reserve.fiat()).to.equal(usdc.address)
+    })
+
+    it('reverts if incorrect market', async () => {
+      await expect(
+        new AaveV3FiatReserve__factory(owner).deploy(dsu.address, UNI_ADDRESS, AAVE_POOL),
+      ).to.be.revertedWithCustomError(reserve, 'AaveV3FiatReserveInvalidPoolError')
     })
   })
 
@@ -155,6 +171,8 @@ describe('NoopFiatReserve', () => {
         .withArgs(user.address, amount, amount)
 
       expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(amount))
+      expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).add(1))
+      expect(await aToken.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2))
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
       expect(await dsu.balanceOf(user.address)).to.equal(amount)
       expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
@@ -174,6 +192,8 @@ describe('NoopFiatReserve', () => {
         .withArgs(user.address, amount, amount)
 
       expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('10')))
+      expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).add(1))
+      expect(await aToken.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2))
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
       expect(await dsu.balanceOf(user.address)).to.equal(amount)
       expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
@@ -201,7 +221,20 @@ describe('NoopFiatReserve', () => {
         .to.emit(reserve, 'Redeem') // Reserve Redeem
         .withArgs(user.address, amount, amount)
 
-      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('1')))
+      const interestAccrued = BigNumber.from(1720) // flucuates depending on timestamp
+
+      expect(await reserve.assets()).to.closeTo(
+        originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
+        10e12,
+      )
+      expect(await usdc.balanceOf(reserve.address)).to.closeTo(
+        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+        10e12,
+      )
+      expect(await aToken.balanceOf(reserve.address)).to.closeTo(
+        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+        10e12,
+      )
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
       expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('1'))
       expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('1')))
@@ -220,7 +253,20 @@ describe('NoopFiatReserve', () => {
         .to.emit(reserve, 'Redeem') // Reserve Redeem
         .withArgs(user.address, amount, amount)
 
-      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('1')))
+      const interestAccrued = BigNumber.from(1720) // flucuates depending on timestamp
+
+      expect(await reserve.assets()).to.closeTo(
+        originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
+        10e12,
+      )
+      expect(await usdc.balanceOf(reserve.address)).to.closeTo(
+        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+        10e12,
+      )
+      expect(await aToken.balanceOf(reserve.address)).to.closeTo(
+        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+        10e12,
+      )
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
       expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('11').sub(amount))
       expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('11')).sub(amount))

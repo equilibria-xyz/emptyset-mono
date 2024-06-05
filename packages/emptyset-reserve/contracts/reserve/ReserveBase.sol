@@ -6,7 +6,6 @@ import { Token18 } from "@equilibria/root/token/types/Token18.sol";
 import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.sol";
 import { Ownable } from "@equilibria/root/attribute/Ownable.sol";
 import { IReserveBase } from "../interfaces/IReserveBase.sol";
-import "hardhat/console.sol";
 
 /// @title ReserveBase
 /// @notice The base contract for all reserves. The underyling strategy is implemented by extending this contract.
