@@ -3,17 +3,17 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect, use } from 'chai'
 import { utils, constants } from 'ethers'
 import HRE from 'hardhat'
-import { DSU, IERC20Metadata, NoopUSDCReserve, NoopUSDCReserve__factory } from '../../../types/generated'
+import { DSU, IERC20Metadata, NoopFiatReserve, NoopFiatReserve__factory } from '../../../types/generated'
 import { impersonate } from '../../../../common/testutil'
 
 const { ethers } = HRE
 use(smock.matchers)
 
-describe('NoopUSDCReserve', () => {
+describe('NoopFiatReserve', () => {
   let owner: SignerWithAddress
   let user: SignerWithAddress
   let coordinator: SignerWithAddress
-  let reserve: NoopUSDCReserve
+  let reserve: NoopFiatReserve
   let usdc: FakeContract<IERC20Metadata>
   let dsu: FakeContract<DSU>
 
@@ -26,13 +26,13 @@ describe('NoopUSDCReserve', () => {
     dsu.decimals.returns(18)
     usdc.decimals.returns(6)
 
-    reserve = await new NoopUSDCReserve__factory(owner).deploy(dsu.address, usdc.address)
+    reserve = await new NoopFiatReserve__factory(owner).deploy(dsu.address, usdc.address)
   })
 
   describe('#constructor', () => {
     it('constructs correctly', async () => {
       expect(await reserve.dsu()).to.equal(dsu.address)
-      expect(await reserve.usdc()).to.equal(usdc.address)
+      expect(await reserve.fiat()).to.equal(usdc.address)
     })
   })
 

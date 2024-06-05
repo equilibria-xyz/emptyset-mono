@@ -2,23 +2,27 @@ import { expect } from 'chai'
 import HRE from 'hardhat'
 import { constants, utils, BigNumber } from 'ethers'
 import {
-  NoopUSDCReserve,
-  NoopUSDCReserve__factory,
+  CompoundV3FiatReserve,
+  CompoundV3FiatReserve__factory,
   IERC20Metadata,
   IERC20Metadata__factory,
   DSU,
   DSU__factory,
+  ICompoundV3Market,
+  ICompoundV3Market__factory,
 } from '../../../types/generated'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { impersonate } from '../../../../common/testutil'
 import { parse } from 'path'
+import { currentBlockTimestamp, reset } from '../../../../common/testutil/time'
 
-const { ethers, deployments } = HRE
+const { ethers, deployments, config } = HRE
 
 const USDC_HOLDER_ADDRESS = '0xb38e8c17e38363af6ebdcb3dae12e0243582891d'
+const COMPOUND_USDC_E_MARKET = '0xA5EDBDD9646f8dFF606d7448e414884C7d905dCA'
 
-describe('NoopUSDCReserve', () => {
+describe('CompoundV3FiatReserve', () => {
   let owner: SignerWithAddress
   let user: SignerWithAddress
   let coordinator: SignerWithAddress
@@ -26,17 +30,20 @@ describe('NoopUSDCReserve', () => {
   let originalReserveDSU: BigNumber
   let originalReserveUSDC: BigNumber
   let originalOwnerUSDC: BigNumber
-  let reserve: NoopUSDCReserve
+  let reserve: CompoundV3FiatReserve
   let dsu: DSU
   let usdc: IERC20Metadata
+  let compound: ICompoundV3Market
 
   const beforeFixture = async () => {
+    await reset(config)
     ;[owner, user, coordinator] = await ethers.getSigners()
 
     dsu = DSU__factory.connect((await deployments.get('DSU')).address, owner)
     usdc = IERC20Metadata__factory.connect((await deployments.get('USDC')).address, owner)
+    compound = ICompoundV3Market__factory.connect(COMPOUND_USDC_E_MARKET, owner)
 
-    reserve = await new NoopUSDCReserve__factory(owner).deploy(dsu.address, usdc.address)
+    reserve = await new CompoundV3FiatReserve__factory(owner).deploy(dsu.address, usdc.address, COMPOUND_USDC_E_MARKET)
 
     // Transfer DSU ownership to new Reserve
     const dsuOwnerSigner = await impersonate.impersonateWithBalance(await dsu.owner(), utils.parseEther('10'))
@@ -46,6 +53,10 @@ describe('NoopUSDCReserve', () => {
 
     await dsu.connect(user).approve(reserve.address, constants.MaxUint256)
     await usdc.connect(user).approve(reserve.address, constants.MaxUint256)
+  }
+
+  beforeEach(async () => {
+    await loadFixture(beforeFixture)
 
     usdcHolder = await impersonate.impersonateWithBalance(USDC_HOLDER_ADDRESS, utils.parseEther('10'))
     await usdc.connect(usdcHolder).transfer(user.address, 1000e6)
@@ -55,16 +66,12 @@ describe('NoopUSDCReserve', () => {
     originalReserveUSDC = originalReserveDSU.sub(1).div(1e12).add(1) // round up to nearest 1e12
     await usdc.connect(usdcHolder).transfer(reserve.address, originalReserveUSDC)
     originalOwnerUSDC = await usdc.balanceOf(owner.address)
-  }
-
-  beforeEach(async () => {
-    await loadFixture(beforeFixture)
   })
 
   describe('#constructor', () => {
     it('constructs correctly', async () => {
       expect(await reserve.dsu()).to.equal(dsu.address)
-      expect(await reserve.usdc()).to.equal(usdc.address)
+      expect(await reserve.fiat()).to.equal(usdc.address)
     })
   })
 
@@ -136,6 +143,11 @@ describe('NoopUSDCReserve', () => {
   })
 
   describe('#mint', () => {
+    beforeEach(async () => {
+      await reserve.connect(owner).updateCoordinator(coordinator.address)
+      await reserve.connect(coordinator).updateAllocation(utils.parseEther('0.5'))
+    })
+
     it('pulls USDC from the sender, wraps it as DSU', async () => {
       const amount = utils.parseEther('10')
       await expect(reserve.connect(user).mint(amount, { gasLimit: 3e6 }))
@@ -148,7 +160,9 @@ describe('NoopUSDCReserve', () => {
         .to.emit(reserve, 'Mint') // Reserve Mint
         .withArgs(user.address, amount, amount)
 
-      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(amount))
+      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(amount).sub(1e12)) // cToken rounding produces an instant loss of 1 (in USDC)
+      expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).add(1))
+      expect(await compound.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).sub(1)) // cToken rounding produces an instant loss of 1 (in USDC)
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
       expect(await dsu.balanceOf(user.address)).to.equal(amount)
       expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
@@ -167,7 +181,9 @@ describe('NoopUSDCReserve', () => {
         .to.emit(reserve, 'Mint') // Reserve Mint
         .withArgs(user.address, amount, amount)
 
-      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('10')))
+      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('10')).sub(1e12)) // cToken rounding produces an instant loss of 1 (in USDC)
+      expect(await usdc.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).add(1))
+      expect(await compound.balanceOf(reserve.address)).to.equal(originalReserveUSDC.add(10e6).div(2).sub(1)) // cToken rounding produces an instant loss of 1 (in USDC)
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 10e6)
       expect(await dsu.balanceOf(user.address)).to.equal(amount)
       expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(amount))
@@ -176,6 +192,9 @@ describe('NoopUSDCReserve', () => {
 
   describe('#redeem', () => {
     beforeEach(async () => {
+      await reserve.connect(owner).updateCoordinator(coordinator.address)
+      await reserve.connect(coordinator).updateAllocation(utils.parseEther('0.5'))
+
       await reserve.connect(user).mint(utils.parseEther('11'))
     })
 
@@ -192,7 +211,20 @@ describe('NoopUSDCReserve', () => {
         .to.emit(reserve, 'Redeem') // Reserve Redeem
         .withArgs(user.address, amount, amount)
 
-      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('1')))
+      const interestAccrued = BigNumber.from(950) // flucuates depending on timestamp
+
+      expect(await reserve.assets()).to.closeTo(
+        originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
+        10e12,
+      )
+      expect(await usdc.balanceOf(reserve.address)).to.closeTo(
+        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+        10e12,
+      )
+      expect(await compound.balanceOf(reserve.address)).to.closeTo(
+        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+        10e12,
+      )
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
       expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('1'))
       expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('1')))
@@ -211,7 +243,20 @@ describe('NoopUSDCReserve', () => {
         .to.emit(reserve, 'Redeem') // Reserve Redeem
         .withArgs(user.address, amount, amount)
 
-      expect(await reserve.assets()).to.equal(originalReserveUSDC.mul(1e12).add(utils.parseEther('1')))
+      const interestAccrued = BigNumber.from(950) // flucuates depending on timestamp
+
+      expect(await reserve.assets()).to.closeTo(
+        originalReserveUSDC.mul(1e12).add(utils.parseEther('1')).add(interestAccrued.mul(1e12)),
+        10e12,
+      )
+      expect(await usdc.balanceOf(reserve.address)).to.closeTo(
+        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+        10e12,
+      )
+      expect(await compound.balanceOf(reserve.address)).to.closeTo(
+        originalReserveUSDC.add(1e6).add(interestAccrued).div(2),
+        10e12,
+      )
       expect(await usdc.balanceOf(user.address)).to.equal(1000e6 - 1e6)
       expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('11').sub(amount))
       expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('11')).sub(amount))

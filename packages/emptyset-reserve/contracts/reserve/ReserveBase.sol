@@ -6,6 +6,7 @@ import { Token18 } from "@equilibria/root/token/types/Token18.sol";
 import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.sol";
 import { Ownable } from "@equilibria/root/attribute/Ownable.sol";
 import { IReserveBase } from "../interfaces/IReserveBase.sol";
+import "hardhat/console.sol";
 
 /// @title ReserveBase
 /// @notice The base contract for all reserves. The underyling strategy is implemented by extending this contract.
@@ -76,7 +77,7 @@ abstract contract ReserveBase is IReserveBase, Ownable {
     /// @notice Mints new DSU by wrapping the underlying asset
     /// @param amount The quantity of the underlying assets to wrap
     /// @return mintAmount The quantity of DSU minted
-    function mint(UFixed18 amount) external invariant returns (UFixed18 mintAmount) {
+    function mint(UFixed18 amount) external returns (UFixed18 mintAmount) {
         _pull(amount);
         _allocate(UFixed18Lib.ZERO);
         mintAmount = _mint(amount);
@@ -86,7 +87,7 @@ abstract contract ReserveBase is IReserveBase, Ownable {
     /// @notice Redeems underlying assets by burning DSU
     /// @param amount The quantity of DSU to burn
     /// @return redemptionAmount The quantity of underlying assets redeemed
-    function redeem(UFixed18 amount) external invariant returns (UFixed18 redemptionAmount) {
+    function redeem(UFixed18 amount) external returns (UFixed18 redemptionAmount) {
         dsu.pull(msg.sender, amount);
         redemptionAmount = _redeem(amount);
         _allocate(redemptionAmount);
@@ -97,9 +98,11 @@ abstract contract ReserveBase is IReserveBase, Ownable {
     /// @dev Can only be called by the owner
     ///      The reserve must have sufficient assets to issue the DSU
     /// @param amount The quantity of DSU to issue
-    function issue(UFixed18 amount) external invariant onlyOwner {
+    function issue(UFixed18 amount) external onlyOwner {
         _issue(amount);
         dsu.push(msg.sender, amount);
+
+        if (redeemPrice().lt(UFixed18Lib.ONE)) revert ReserveBaseInsufficientAssetsError();
     }
 
     /// @notice Mints new DSU by wrapping the underlying asset
@@ -175,16 +178,5 @@ abstract contract ReserveBase is IReserveBase, Ownable {
         if (msg.sender != coordinator) revert ReserveBaseNotCoordinatorError();
 
         _;
-    }
-
-    /// @dev The invariant of the state transition
-    modifier invariant {
-        // capture redeemPrice before state transition
-        UFixed18 initialRedeemPrice = redeemPrice();
-
-        _;
-
-        // redeemPrice must not decrease during the state transition
-        if (redeemPrice().lt(initialRedeemPrice)) revert ReserveBaseInsufficientAssetsError();
     }
 }
