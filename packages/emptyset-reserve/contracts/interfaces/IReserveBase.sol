@@ -24,8 +24,21 @@ interface IReserveBase is IReserve {
     /// @dev The allocation of the reserve has been updated to `newAllocation`
     event AllocationUpdated(UFixed18 newAllocation);
 
+    /// @notice Returns the address of the reserve's coordinator, who has the ability to update the reserve's allocation
+    /// @return The reserve's coordinator
     function coordinator() external view returns (address);
+
+    /// @notice Returns the allocation percentage of the reserve's assets to the underlying strategy
+    /// @return The reserve's allocation
     function allocation() external view returns (UFixed18);
+
+    /// @notice Update the reserve's coordinator to `newCoordinator`
+    /// @dev Can only be called by the owner
+    /// @param newCoordinator The new coordinator of the reserve
     function updateCoordinator(address newCoordinator) external;
+
+    /// @notice Update the reserve's allocation to `newAllocation`
+    /// @dev Can only be called by the coordinator
+    /// @param newAllocation The new allocation of the reserve
     function updateAllocation(UFixed18 newAllocation) external;
 }

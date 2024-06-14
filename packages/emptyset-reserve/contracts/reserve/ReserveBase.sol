@@ -5,18 +5,19 @@ import { DSU as IDSU } from "@emptyset/dsu/contracts/DSU.sol";
 import { Token18 } from "@equilibria/root/token/types/Token18.sol";
 import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.sol";
 import { Ownable } from "@equilibria/root/attribute/Ownable.sol";
+import { IReserve } from "../interfaces/IReserve.sol";
 import { IReserveBase } from "../interfaces/IReserveBase.sol";
 
 /// @title ReserveBase
 /// @notice The base contract for all reserves. The underyling strategy is implemented by extending this contract.
 abstract contract ReserveBase is IReserveBase, Ownable {
-    /// @dev The DSU stablecoin that the reserve has authorit to issue
+    /// @inheritdoc IReserve
     Token18 public immutable dsu;
 
-    /// @dev The address of the reserve's coordinator, who has the ability to update the reserve's allocation
+    /// @inheritdoc IReserveBase
     address public coordinator;
 
-    /// @dev The allocation percentage of the reserve's assets to the underlying strategy
+    /// @inheritdoc IReserveBase
     UFixed18 public allocation;
 
     /// @notice Construct a new ReserveBase
@@ -34,17 +35,13 @@ abstract contract ReserveBase is IReserveBase, Ownable {
         if (IDSU(Token18.unwrap(dsu)).owner() != address(this)) IDSU(Token18.unwrap(dsu)).acceptOwnership();
     }
 
-    /// @notice Update the reserve's coordinator to `newCoordinator`
-    /// @dev Can only be called by the owner
-    /// @param newCoordinator The new coordinator of the reserve
+    /// @inheritdoc IReserveBase
     function updateCoordinator(address newCoordinator) external onlyOwner {
         coordinator = newCoordinator;
         emit CoordinatorUpdated(newCoordinator);
     }
 
-    /// @notice Update the reserve's allocation to `newAllocation`
-    /// @dev Can only be called by the coordinator
-    /// @param newAllocation The new allocation of the reserve
+    /// @inheritdoc IReserveBase
     function updateAllocation(UFixed18 newAllocation) external onlyCoordinator {
         if (newAllocation.gt(UFixed18Lib.ONE)) revert ReserveBaseInvalidAllocationError();
 
@@ -52,29 +49,24 @@ abstract contract ReserveBase is IReserveBase, Ownable {
         emit AllocationUpdated(newAllocation);
     }
 
-    /// @notice Returns the quantity of assets, both allocated and unallocated, held by the reserve
-    /// @return The quantity of assets held by the reserve
+    /// @inheritdoc IReserve
     function assets() public view returns (UFixed18) {
         return _unallocated().add(_allocated());
     }
 
-    /// @notice Returns the price in the underlying assets to mint a single DSU
-    /// @dev Underlying assets amounts are scaled to 18 decimal places
-    /// @return The price to mint a single DSU
+    /// @inheritdoc IReserve
     function mintPrice() public pure returns (UFixed18) {
+        // always mint at 1:1
         return UFixed18Lib.ONE;
     }
 
-    /// @notice Returns the price in DSU to redeem a single underlying asset
-    /// @dev Underlying assets amounts are scaled to 18 decimal places
-    /// @return The price to mint a single DSU
+    /// @inheritdoc IReserve
     function redeemPrice() public view returns (UFixed18) {
+        // if overcollateralized, cap at 1:1 redemption / if undercollateralized, redeem pro-rata
         return assets().unsafeDiv(dsu.totalSupply()).min(UFixed18Lib.ONE);
     }
 
-    /// @notice Mints new DSU by wrapping the underlying asset
-    /// @param amount The quantity of the underlying assets to wrap
-    /// @return mintAmount The quantity of DSU minted
+    /// @inheritdoc IReserve
     function mint(UFixed18 amount) external returns (UFixed18 mintAmount) {
         _pull(amount);
         _allocate(UFixed18Lib.ZERO);
@@ -82,9 +74,7 @@ abstract contract ReserveBase is IReserveBase, Ownable {
         dsu.push(msg.sender, mintAmount);
     }
 
-    /// @notice Redeems underlying assets by burning DSU
-    /// @param amount The quantity of DSU to burn
-    /// @return redemptionAmount The quantity of underlying assets redeemed
+    /// @inheritdoc IReserve
     function redeem(UFixed18 amount) external returns (UFixed18 redemptionAmount) {
         dsu.pull(msg.sender, amount);
         redemptionAmount = _redeem(amount);
@@ -92,10 +82,7 @@ abstract contract ReserveBase is IReserveBase, Ownable {
         _push(redemptionAmount);
     }
 
-    /// @notice Issues new DSU
-    /// @dev Can only be called by the owner
-    ///      The reserve must have sufficient assets to issue the DSU
-    /// @param amount The quantity of DSU to issue
+    /// @inheritdoc IReserve
     function issue(UFixed18 amount) external onlyOwner {
         _issue(amount);
         dsu.push(msg.sender, amount);
