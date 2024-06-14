@@ -69,8 +69,7 @@ abstract contract ReserveBase is IReserveBase, Ownable {
     /// @dev Underlying assets amounts are scaled to 18 decimal places
     /// @return The price to mint a single DSU
     function redeemPrice() public view returns (UFixed18) {
-        UFixed18 totalSupply = UFixed18.wrap(IDSU(Token18.unwrap(dsu)).totalSupply()); // TODO: move to root
-        return assets().unsafeDiv(totalSupply).min(UFixed18Lib.ONE);
+        return assets().unsafeDiv(dsu.totalSupply()).min(UFixed18Lib.ONE);
     }
 
     /// @notice Mints new DSU by wrapping the underlying asset

@@ -100,17 +100,10 @@
   resolved "https://registry.yarnpkg.com/@ensdomains/resolver/-/resolver-0.2.4.tgz#c10fe28bf5efbf49bff4666d909aed0265efbc89"
   integrity sha512-bvaTH34PMCbv6anRa9I/0zjLJgY4EuznbEMgbV77JBCQ9KNC46rzi0avuxpOfu+xDjPEtSFGqVEOr5GlUSGudA==
 
-"@equilibria/root@0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@equilibria/root/-/root-0.2.0.tgz#0cad4d9f9b2872e4282166b950d85dbb20d27acf"
-  integrity sha512-5cfN7IyzkwgD3R9GovDoEXio21Fc15e5iuk7xcWuB5Ns9zBXYnhPFthtn8Y0JubIUvpENX1jqCz7VxfFgAZbJA==
-  dependencies:
-    "@openzeppelin/contracts" "4.6.0"
-
-"@equilibria/root@2.2.0":
-  version "2.2.0"
-  resolved "https://registry.yarnpkg.com/@equilibria/root/-/root-2.2.0.tgz#7619a0208999b7cbbea6b9cec4b6cccecab5f9c2"
-  integrity sha512-kCNeBRAuJdPuxHIMh/1hPm3aHx1NOBOup+0mwescrtb6JWP/2lewROTSCL1o5PyXERlHjrmOsabHAnbnGgL3TA==
+"@equilibria/root@2.3.0-rc4":
+  version "2.3.0-rc4"
+  resolved "https://registry.yarnpkg.com/@equilibria/root/-/root-2.3.0-rc4.tgz#11a522588e6625d675b12e2d268c37b13b4ceeda"
+  integrity sha512-DC6+jgLjIbGzq5Bkxrun10TSib3rBFfXgo8ZAaX319EcDjsA1xnb8rtuyRC4A551MswMf7a1jHoEnsfoRgUZrg==
   dependencies:
     "@openzeppelin/contracts" "4.6.0"
 
