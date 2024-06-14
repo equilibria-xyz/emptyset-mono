@@ -16,10 +16,11 @@
     "deploy": "OPTIMIZER_ENABLED=true hardhat deploy",
     "verify": "hardhat etherscan-verify --sleep --solc-input",
     "gasReport": "REPORT_GAS=true yarn test:integration",
+    "gasReport:optimizer": "OPTIMIZER_ENABLED=true REPORT_GAS=true yarn test:integration",
     "test": "hardhat test test/unit/**/*",
-    "test:integration": "FORK_ENABLED=true FORK_BLOCK_NUMBER=16185168 hardhat test test/integration/**/*",
+    "test:integration": "FORK_NETWORK=arbitrum FORK_ENABLED=true FORK_BLOCK_NUMBER=218197000 hardhat test test/integration/**/*",
     "coverage": "hardhat coverage --testfiles 'test/unit/**/*'",
-    "coverage:integration": "FORK_ENABLED=true FORK_BLOCK_NUMBER=16185168 hardhat coverage --testfiles 'test/integration/**/*'",
+    "coverage:integration": "FORK_NETWORK=arbitrum FORK_ENABLED=true FORK_BLOCK_NUMBER=218197000 hardhat coverage --testfiles 'test/integration/**/*'",
     "lint": "eslint --fix --ext '.ts,.js' ./ && solhint 'contracts/**/*.sol' --fix",
     "format": "prettier -w .",
     "clean": "rm -rf cache artifacts types/generated dist deployments/localhost",
@@ -45,7 +46,7 @@
   "license": "APACHE-2.0",
   "dependencies": {
     "@emptyset/dsu": "0.1.0",
-    "@equilibria/root": "0.2.0",
+    "@equilibria/root": "2.3.0-rc4",
     "@openzeppelin/contracts": "4.8.0"
   },
   "peerDependencies": {

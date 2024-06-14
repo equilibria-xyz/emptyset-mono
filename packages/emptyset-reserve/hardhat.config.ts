@@ -1,5 +1,5 @@
 import { dirname } from 'path'
-import defaultConfig from '../common/hardhat.default.config'
+import defaultConfig, { FORK_ENABLED, FORK_NETWORK } from '../common/hardhat.default.config'
 
 const dsuDir = dirname(require.resolve('@emptyset/dsu/package.json'))
 
@@ -15,13 +15,13 @@ const config = defaultConfig({
     optimism: [`${dsuDir}/deployments/optimism`],
     mainnet: [`${dsuDir}/deployments/mainnet`],
     base: [`${dsuDir}/deployments/base`],
-    hardhat: [`${dsuDir}/deployments/mainnet`],
-    localhost: [`${dsuDir}/deployments/localhost`],
+    hardhat: [FORK_ENABLED ? `${dsuDir}/deployments/${FORK_NETWORK}` : `${dsuDir}/deployments/mainnet`],
+    localhost: [FORK_ENABLED ? `${dsuDir}/deployments/${FORK_NETWORK}` : `${dsuDir}/deployments/localhost`],
   },
   dependencyPaths: [
     '@emptyset/dsu/contracts/DSU.sol',
-    '@equilibria/root/control/unstructured/CrossChainOwner/UCrossChainOwner_Arbitrum.sol',
-    '@equilibria/root/control/unstructured/CrossChainOwner/UCrossChainOwner_Optimism.sol',
+    '@equilibria/root/attribute/CrossChainOwner/CrossChainOwner_Arbitrum.sol',
+    '@equilibria/root/attribute/CrossChainOwner/CrossChainOwner_Optimism.sol',
     '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol',
     '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol',
   ],
