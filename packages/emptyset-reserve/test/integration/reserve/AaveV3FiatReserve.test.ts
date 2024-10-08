@@ -488,6 +488,12 @@ describe('AaveV3FiatReserve', () => {
         expect(await dsu.balanceOf(user.address)).to.equal(utils.parseEther('11').sub(amount))
         expect(await dsu.totalSupply()).to.equal(originalReserveDSU.add(utils.parseEther('11')).sub(amount))
       })
+
+      context('when resulting strategy withdrawal is zero', () => {
+        it('does not revert', async () => {
+          await expect(reserve.connect(user).redeem(1)).to.not.be.reverted
+        })
+      })
     })
   })
 
