@@ -3,6 +3,7 @@ pragma solidity 0.8.17;
 
 import { Token18 } from "@equilibria/root/token/types/Token18.sol";
 import { Token6, Token6Lib } from "@equilibria/root/token/types/Token6.sol";
+import { Fixed6, Fixed6Lib } from "@equilibria/root/number/types/Fixed6.sol";
 import { UFixed6, UFixed6Lib } from "@equilibria/root/number/types/UFixed6.sol";
 import { UFixed18, UFixed18Lib } from "@equilibria/root/number/types/UFixed18.sol";
 import { IAaveV3FiatReserve, IAaveV3Pool } from "../../interfaces/strategy/IAaveV3FiatReserve.sol";
@@ -63,10 +64,12 @@ contract AaveV3FiatReserve is IAaveV3FiatReserve, ReserveBase {
 
     /// @inheritdoc ReserveBase
     function _update(UFixed18 collateral, UFixed18 target) internal virtual override {
-        if (collateral.gt(target))
-            aave.withdraw(fiat, UFixed6Lib.from(collateral.sub(target)), address(this));
-        if (target.gt(collateral))
-            aave.deposit(fiat, UFixed6Lib.from(target.sub(collateral)), address(this), 0);
+        UFixed6 delta = UFixed6Lib.from(collateral.gt(target) ? collateral.sub(target) : target.sub(collateral));
+
+        // Aave will revert if the amount is zero
+        if (delta.isZero()) return;
+        if (collateral.gt(target)) aave.withdraw(fiat, delta, address(this));
+        if (target.gt(collateral)) aave.deposit(fiat, delta, address(this), 0);
     }
 }
 
