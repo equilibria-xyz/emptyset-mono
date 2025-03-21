@@ -1,10 +1,10 @@
 {
-  "name": "@emptyset/reserve",
+  "name": "@equilibria/emptyset-reserve",
   "version": "0.1.0",
-  "description": "Emptyset Reserve contracts",
+  "description": "Equilibria Reserve contracts",
   "files": [
-    "contracts",
-    "artifacts/contracts",
+    "contracts/interfaces",
+    "artifacts/contracts/interfaces",
     "deployments/!(localhost)",
     "dist"
   ],
@@ -40,7 +40,7 @@
     "deploy:fork:mainnet": "FORK_ENABLED=true FORK_NETWORK=mainnet hardhat deploy --network localhost",
     "node:fork:base": "FORK_ENABLED=true FORK_NETWORK=base NODE_INTERVAL_MINING=500 hardhat node",
     "deploy:fork:base": "FORK_ENABLED=true FORK_NETWORK=base hardhat deploy --network localhost",
-    "prepack": "yarn clean && yarn build && find artifacts/contracts -name '*.dbg.json' -type f -delete"
+    "prepack": "yarn clean && yarn compile && find artifacts/contracts -name '*.dbg.json' -type f -delete"
   },
   "author": "",
   "license": "APACHE-2.0",
