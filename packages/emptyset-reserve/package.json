@@ -1,7 +1,7 @@
 {
-  "name": "@emptyset/reserve",
+  "name": "@equilibria/emptyset-reserve",
   "version": "0.1.0",
-  "description": "Emptyset Reserve contracts",
+  "description": "Equilibria Reserve contracts",
   "files": [
     "contracts/interfaces",
     "artifacts/contracts/interfaces",
