@@ -24,6 +24,7 @@ const config = defaultConfig({
     '@equilibria/root/attribute/CrossChainOwner/CrossChainOwner_Optimism.sol',
     '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol',
     '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol',
+    '@openzeppelin/contracts/token/ERC20/extensions/ERC20VotesComp.sol',
   ],
 })
 
