@@ -1,0 +1,17 @@
+[profile.default]
+src = "packages"
+test = "test"
+out = "out"
+libs = ["lib"]
+solc = "0.8.17"
+optimizer = true
+optimizer_runs = 1
+
+[rpc_endpoints]
+mainnet = "${MAINNET_NODE_URL}"
+
+[fmt]
+line_length = 120
+
+[lint]
+lint_on_build = false

@@ -6,52 +6,36 @@ Reserve contracts for the Emptyset protocol.
 
 ### Pre Requisites
 
-This repo works best with Node.js v16.x.x, this is preconfigured for users of [asdf](https://asdf-vm.com/).
-
-Before running any command, make sure to install dependencies:
+Install Foundry and initialize submodules from the repository root:
 
 ```sh
-$ yarn
+$ git submodule update --init --recursive
 ```
 
 ### Compile
 
-Compile the smart contracts with Hardhat and Typechain:
+Compile the smart contracts:
 
 ```sh
-$ yarn compile
+$ forge build
 ```
 
 ### Test
 
-Run the Mocha tests:
+Run the reserve tests:
 
 ```sh
-$ yarn test
+$ forge test --offline --match-path 'test/reserve/*.t.sol'
 ```
 
-To run integration tests against a Mainnet fork, set your `MAINNET_NODE_URL` in `.env` and run
+Run the full test suite:
 
 ```sh
-$ yarn test:integration
+$ forge test --offline
 ```
 
-### Gas Report
-
-To get a gas report based on integration test calls:
+Run the mainnet fork migration test with `MAINNET_NODE_URL` set:
 
 ```sh
-$ yarn gasReport
-```
-
-### Deploy contract to netowrk (requires Mnemonic and infura API key)
-
-```sh
-$ yarn deploy --network <network>
-```
-
-### Validate a contract with etherscan (requires API ke)
-
-```sh
-$ yarn verify --network <network>
+$ forge test --offline --match-path test/reserve/L1Migrator.mainnet.t.sol
 ```

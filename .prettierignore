@@ -1,6 +1,9 @@
 **/artifacts
 **/cache
 **/node_modules
-**/types/generated
+**/out
+**/broadcast
+**/factories
+**/dist
 **/coverage
 **/coverage.json

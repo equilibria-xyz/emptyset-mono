@@ -2,6 +2,16 @@
 
 node_modules
 
+cache
+out
+broadcast
+artifacts
+factories
+coverage
+coverage.json
+dist
+.eslintcache
+
 .idea
 .vscode
 
