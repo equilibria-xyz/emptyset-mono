@@ -3,9 +3,11 @@ src = "packages"
 test = "test"
 out = "out"
 libs = ["lib"]
-solc = "0.8.17"
+solc = "0.8.35"
 optimizer = true
 optimizer_runs = 1
+ignored_error_codes = ["license", "code-size", "init-code-size", "transient-storage", 4591]
+ignored_warnings_from = ["lib"]
 
 [rpc_endpoints]
 mainnet = "${MAINNET_NODE_URL}"

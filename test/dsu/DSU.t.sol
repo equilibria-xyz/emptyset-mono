@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.17;
+pragma solidity ^0.8.13;
 
 import { Test } from "forge-std/Test.sol";
 import { DSU } from "@emptyset/dsu/contracts/DSU.sol";

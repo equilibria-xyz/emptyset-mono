@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.17;
+pragma solidity 0.8.35;
 
 import { Token18 } from "@equilibria/root/token/types/Token18.sol";
 import { Token6 } from "@equilibria/root/token/types/Token6.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.17;
+pragma solidity 0.8.35;
 
 import { Token18 } from "@equilibria/root/token/types/Token18.sol";
 import { Token6, Token6Lib } from "@equilibria/root/token/types/Token6.sol";
@@ -72,4 +72,3 @@ contract AaveV3FiatReserve is IAaveV3FiatReserve, ReserveBase {
         if (target.gt(collateral)) aave.deposit(fiat, delta, address(this), 0);
     }
 }
-
