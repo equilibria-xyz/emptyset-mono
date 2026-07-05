@@ -2,14 +2,11 @@
 pragma solidity ^0.8.13;
 
 import { Test } from "forge-std/Test.sol";
-import { IOwnable } from "@equilibria/root/attribute/interfaces/IOwnable.sol";
 import { Token6 } from "@equilibria/root/token/types/Token6.sol";
 import { Token18 } from "@equilibria/root/token/types/Token18.sol";
 import { UFixed18 } from "@equilibria/root/number/types/UFixed18.sol";
 import { DSU } from "@emptyset/dsu/contracts/DSU.sol";
-import { IReserve } from "@emptyset/reserve/contracts/interfaces/IReserve.sol";
-import { IReserveBase } from "@emptyset/reserve/contracts/interfaces/IReserveBase.sol";
-import { NoopFiatReserve } from "@emptyset/reserve/contracts/reserve/strategy/NoopFiatReserve.sol";
+import { NoopFiatReserve } from "@emptyset/reserve/contracts/reserve/NoopFiatReserve.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
 contract NoopFiatReserveTest is Test {
@@ -18,7 +15,6 @@ contract NoopFiatReserveTest is Test {
     NoopFiatReserve private reserve;
 
     address private user = makeAddr("user");
-    address private coordinator = makeAddr("coordinator");
 
     function setUp() public {
         dsu = new DSU();
@@ -26,7 +22,8 @@ contract NoopFiatReserveTest is Test {
         reserve = new NoopFiatReserve(Token18.wrap(address(dsu)), Token6.wrap(address(usdc)));
 
         dsu.transferOwnership(address(reserve));
-        reserve.initialize();
+        vm.prank(address(reserve));
+        dsu.acceptOwnership();
 
         usdc.mint(user, 1000e6);
         vm.prank(user);
@@ -40,94 +37,15 @@ contract NoopFiatReserveTest is Test {
         assertEq(Token6.unwrap(reserve.fiat()), address(usdc));
     }
 
-    function testInitializeDoesNothingIfAlreadyDsuOwner() public {
-        DSU newDsu = new DSU();
-        NoopFiatReserve newReserve = new NoopFiatReserve(Token18.wrap(address(newDsu)), Token6.wrap(address(usdc)));
-
-        newDsu.transferOwnership(address(newReserve));
-        vm.prank(address(newReserve));
-        newDsu.acceptOwnership();
-
-        newReserve.initialize();
-
-        assertEq(newDsu.owner(), address(newReserve));
-        assertEq(newReserve.owner(), address(this));
-    }
-
-    function testInitializeDoesNothingIfAlreadyHasOwner() public {
-        DSU newDsu = new DSU();
-        NoopFiatReserve newReserve = new NoopFiatReserve(Token18.wrap(address(newDsu)), Token6.wrap(address(usdc)));
-
-        vm.prank(address(0));
-        newReserve.updatePendingOwner(address(this));
-        newReserve.acceptOwner();
-        newDsu.transferOwnership(address(newReserve));
-
-        vm.prank(user);
-        newReserve.initialize();
-
-        assertEq(newReserve.owner(), address(this));
-        assertEq(newDsu.owner(), address(newReserve));
-    }
-
-    function testInitializeAcceptsDsuOwnership() public {
-        DSU newDsu = new DSU();
-        NoopFiatReserve newReserve = new NoopFiatReserve(Token18.wrap(address(newDsu)), Token6.wrap(address(usdc)));
-        newDsu.transferOwnership(address(newReserve));
-
-        newReserve.initialize();
-
-        assertEq(newDsu.owner(), address(newReserve));
-    }
-
-    function testInitializeRevertsIfReserveIsNotPendingDsuOwner() public {
-        DSU newDsu = new DSU();
-        NoopFiatReserve newReserve = new NoopFiatReserve(Token18.wrap(address(newDsu)), Token6.wrap(address(usdc)));
-
-        vm.expectRevert("Ownable2Step: caller is not the new owner");
-        newReserve.initialize();
-    }
-
-    function testUpdateCoordinator() public {
-        reserve.updateCoordinator(coordinator);
-
-        assertEq(reserve.coordinator(), coordinator);
-    }
-
-    function testUpdateCoordinatorRevertsIfNotOwner() public {
-        vm.expectRevert(abi.encodeWithSelector(IOwnable.OwnableNotOwnerError.selector, user));
-        vm.prank(user);
-        reserve.updateCoordinator(coordinator);
-
-        assertEq(reserve.coordinator(), address(0));
-    }
-
-    function testUpdateAllocation() public {
-        reserve.updateCoordinator(coordinator);
-
-        vm.prank(coordinator);
-        reserve.updateAllocation(UFixed18.wrap(0.5 ether));
-
-        assertEq(UFixed18.unwrap(reserve.allocation()), 0.5 ether);
-    }
-
-    function testUpdateAllocationRevertsIfTooLarge() public {
-        reserve.updateCoordinator(coordinator);
-
-        vm.expectRevert(IReserveBase.ReserveBaseInvalidAllocationError.selector);
-        vm.prank(coordinator);
-        reserve.updateAllocation(UFixed18.wrap(1 ether + 1));
-    }
-
-    function testUpdateAllocationRevertsIfNotCoordinator() public {
-        vm.expectRevert(IReserveBase.ReserveBaseNotCoordinatorError.selector);
-        vm.prank(user);
-        reserve.updateAllocation(UFixed18.wrap(0.5 ether));
-    }
-
     function testPricesReturnOne() public {
         assertEq(UFixed18.unwrap(reserve.mintPrice()), 1 ether);
         assertEq(UFixed18.unwrap(reserve.redeemPrice()), 1 ether);
+    }
+
+    function testAssetsReturnsFiatBalance() public {
+        usdc.mint(address(reserve), 123e6);
+
+        assertEq(UFixed18.unwrap(reserve.assets()), 123 ether);
     }
 
     function testMintPullsUsdcAndMintsDsu() public {
@@ -177,26 +95,20 @@ contract NoopFiatReserveTest is Test {
         assertEq(UFixed18.unwrap(reserve.assets()), 1 ether);
     }
 
-    function testIssueMintsDsuUpToCollateralRequirement() public {
-        usdc.mint(address(reserve), 10e6);
-
-        reserve.issue(UFixed18.wrap(10 ether));
-
-        assertEq(dsu.balanceOf(address(this)), 10 ether);
-        assertEq(dsu.totalSupply(), 10 ether);
-        assertEq(UFixed18.unwrap(reserve.assets()), 10 ether);
-    }
-
-    function testIssueRevertsIfUnderCollateralized() public {
-        usdc.mint(address(reserve), 10e6);
-
-        vm.expectRevert(IReserve.ReserveBaseInsufficientAssetsError.selector);
-        reserve.issue(UFixed18.wrap(11 ether));
-    }
-
-    function testIssueRevertsIfNotOwner() public {
-        vm.expectRevert(abi.encodeWithSelector(IOwnable.OwnableNotOwnerError.selector, user));
+    function testRedeemRevertsIfReserveLacksFiat() public {
         vm.prank(user);
-        reserve.issue(UFixed18.wrap(10 ether));
+        reserve.mint(UFixed18.wrap(10 ether));
+
+        vm.prank(address(reserve));
+        usdc.transfer(user, 5e6);
+
+        vm.prank(user);
+        vm.expectRevert();
+        reserve.redeem(UFixed18.wrap(10 ether));
+    }
+
+    function testIssueReverts() public {
+        vm.expectRevert(NoopFiatReserve.NotImplementedError.selector);
+        reserve.issue(UFixed18.wrap(1 ether));
     }
 }
