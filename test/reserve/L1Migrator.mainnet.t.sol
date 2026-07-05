@@ -6,7 +6,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Token6 } from "@equilibria/root/token/types/Token6.sol";
 import { Token18 } from "@equilibria/root/token/types/Token18.sol";
 import { UFixed18 } from "@equilibria/root/number/types/UFixed18.sol";
-import { NoopFiatReserve } from "@emptyset/reserve/contracts/reserve/strategy/NoopFiatReserve.sol";
+import { NoopFiatReserve } from "@emptyset/reserve/contracts/reserve/NoopFiatReserve.sol";
 import { L1Migrator } from "@emptyset/reserve/contracts/reserve/migration/L1Migrator.sol";
 import { MockVotes } from "../mocks/MockVotes.sol";
 
@@ -99,6 +99,7 @@ contract L1MigratorMainnetTest is Test {
         uint256 reserveComp;
         uint256 reserveEss;
         uint256 timelockEss;
+        uint256 timelockUsdc;
         uint256 essTotalSupply;
         uint256 twoWayDsu;
         uint256 twoWayUsdc;
@@ -146,7 +147,7 @@ contract L1MigratorMainnetTest is Test {
 
         assertPreState(pre, slots);
 
-        uint256 proposalId = proposeWinddown(proposer, pre.timelockEss, address(migrator), address(finalReserve));
+        uint256 proposalId = proposeCleanup(proposer, pre.timelockEss, address(migrator), address(finalReserve));
         executeProposal(proposalId, proposer, voter);
 
         assertPostState(pre, slots, address(finalReserve));
@@ -160,6 +161,7 @@ contract L1MigratorMainnetTest is Test {
         pre.reserveComp = comp.balanceOf(RESERVE);
         pre.reserveEss = ess.balanceOf(RESERVE);
         pre.timelockEss = ess.balanceOf(TIMELOCK);
+        pre.timelockUsdc = usdc.balanceOf(TIMELOCK);
         pre.essTotalSupply = ess.totalSupply();
         pre.twoWayDsu = dsu.balanceOf(TWO_WAY_BATCHER);
         pre.twoWayUsdc = usdc.balanceOf(TWO_WAY_BATCHER);
@@ -190,13 +192,17 @@ contract L1MigratorMainnetTest is Test {
         assertGt(pre.totalDebt, 0);
         assertGt(pre.twoWayDebt, 0);
         assertEq(pre.totalDebt, pre.twoWayDebt + pre.wrapOnlyDebt);
+        assertEq(pre.wrapOnlyDebt, 0);
+        assertEq(dsu.balanceOf(WRAP_ONLY_BATCHER), 0);
+        assertEq(usdc.balanceOf(WRAP_ONLY_BATCHER), 0);
+        assertEq(IERC20(TWO_WAY_BATCHER).totalSupply(), 0);
         assertNotEq(vm.load(RESERVE, slots.cUsdcEssPrice), bytes32(0));
         assertNotEq(vm.load(RESERVE, slots.cUsdcEssAmount), bytes32(0));
         assertNotEq(vm.load(RESERVE, slots.compEssPrice), bytes32(0));
         assertNotEq(vm.load(RESERVE, slots.compEssAmount), bytes32(0));
     }
 
-    function proposeWinddown(
+    function proposeCleanup(
         address proposer,
         uint256 timelockEss,
         address migrator,
@@ -220,7 +226,27 @@ contract L1MigratorMainnetTest is Test {
         calldatas[2] = abi.encode(RESERVE, finalReserve);
 
         vm.prank(proposer);
-        return governor.propose(targets, values, signatures, calldatas, "Wind down DSU reserve debt integrations");
+        return governor.propose(targets, values, signatures, calldatas, proposalDescription());
+    }
+
+    function proposalDescription() private pure returns (string memory) {
+        return string.concat(
+            "# DSU Reserve Cleanup (Ethereum L1)\n\n",
+            "This proposal cleans up and modernizes the DSU reserve on Ethereum L1. DSU remains fully backed ",
+            "and redeemable 1:1 for USDC; retired legacy integrations are permanently disabled, simplifying ",
+            "future operation of the reserve.\n\n",
+            "**Action 1 - ESS.transfer(Reserve, amount):** Transfer the Timelock's full ESS balance to the Reserve ",
+            "so it is burned during migration.\n\n",
+            "**Action 2 - ProxyRoot.upgradeAndCall(Reserve, L1Migrator, initialize()):** Atomically: redeem the ",
+            "Reserve's entire cUSDC position to USDC; recall all DSU and USDC from the Two Way Batcher and clear ",
+            "all batcher debt; clear the legacy cUSDC/ESS and COMP/ESS orders; burn all DSU and ESS held by the ",
+            "Reserve; withdraw USDC in excess of the outstanding DSU supply to the Timelock; migrate storage to ",
+            "the modern layout and clear legacy registry, pauser, and reentrancy state. The migration reverts ",
+            "unless the remaining DSU total supply is fully backed by the Reserve's USDC.\n\n",
+            "**Action 3 - ProxyRoot.upgrade(Reserve, NoopFiatReserve):** Set the new Reserve implementation: ",
+            "1:1 USDC mint/redeem only, no strategy allocation, no debt, no orders.\n\n",
+            "The Timelock retains control of the Reserve through the ProxyRoot for future governance actions."
+        );
     }
 
     function executeProposal(uint256 proposalId, address proposer, address voter) private {
@@ -259,7 +285,9 @@ contract L1MigratorMainnetTest is Test {
         assertEq(ess.balanceOf(RESERVE), 0);
         assertEq(ess.balanceOf(TIMELOCK), 0);
         assertEq(ess.totalSupply(), pre.essTotalSupply - pre.reserveEss - pre.timelockEss);
-        assertGt(postReserveUsdc, pre.reserveUsdc + pre.twoWayUsdc);
+        assertGe(postReserveUsdc * 1e12, dsu.totalSupply());
+        assertLt(postReserveUsdc * 1e12, dsu.totalSupply() + 1e12);
+        assertGt(usdc.balanceOf(TIMELOCK), pre.timelockUsdc);
         assertEq(comp.balanceOf(RESERVE), pre.reserveComp);
 
         expectStorageZero(LEGACY_TOTAL_DEBT_SLOT);
@@ -282,9 +310,8 @@ contract L1MigratorMainnetTest is Test {
         assertEq(vm.load(RESERVE, ROOT_INITIALIZER_VERSION_SLOT), bytes32(uint256(2)));
         expectStorageZero(ROOT_INITIALIZER_INITIALIZING_SLOT);
 
-        assertEq(reserve.owner(), TIMELOCK);
-        assertEq(reserve.coordinator(), address(0));
-        assertEq(UFixed18.unwrap(reserve.allocation()), 0);
+        assertEq(dsu.owner(), RESERVE);
+        assertEq(IDSULike(ESS).owner(), RESERVE);
         assertEq(Token18.unwrap(reserve.dsu()), DSU);
         assertEq(Token6.unwrap(reserve.fiat()), USDC);
         assertEq(UFixed18.unwrap(reserve.assets()), postReserveUsdc * 1e12);
@@ -313,6 +340,12 @@ contract L1MigratorMainnetTest is Test {
         reserve.redeem(UFixed18.wrap(4 ether));
         assertEq(dsu.balanceOf(user), 6 ether);
         assertEq(usdc.balanceOf(user), 94e6);
+
+        (bool initializeSuccess,) = RESERVE.call(abi.encodeWithSignature("initialize()"));
+        assertFalse(initializeSuccess);
+
+        vm.expectRevert(NoopFiatReserve.NotImplementedError.selector);
+        reserve.issue(UFixed18.wrap(1 ether));
     }
 
     function mappingSlot(address account, uint256 slot) private pure returns (bytes32) {

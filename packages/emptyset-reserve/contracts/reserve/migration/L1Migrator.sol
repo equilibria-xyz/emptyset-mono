@@ -57,6 +57,7 @@ contract L1Migrator {
         _closeBatchers();
         _clearOrders();
         _burnTokens();
+        _withdrawExcess();
         _migrateStorage();
 
         _invariant();
@@ -75,6 +76,10 @@ contract L1Migrator {
         totalDebt = 0;
         delete debt[TWO_WAY_BATCHER];
         delete debt[WRAP_ONLY_BATCHER];
+    }
+
+    function _withdrawExcess() private {
+        USDC.transfer(TIMELOCK, ((USDC.balanceOf(address(this)) * 1e12) - DSU.totalSupply()) / 1e12);
     }
 
     function _clearOrders() private {
