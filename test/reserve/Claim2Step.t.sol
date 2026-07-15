@@ -355,4 +355,70 @@ contract Claim2StepTest is Test {
         vm.prank(a);
         claim.unlock();
     }
+
+    // --- owner recall of leftover funds ---
+
+    /// @dev After the deadline the owner may recall whatever fiat is left (e.g. the share of lockers who never
+    ///      returned to unlock) to itself. Intended to be used well after close, at the owner's discretion.
+    function testCloseRecallsLeftoverToOwner() public {
+        _fund();
+        _initialize();
+
+        vm.prank(a);
+        claim.lock(UFixed18.wrap(500e18));
+        vm.prank(b);
+        claim.lock(UFixed18.wrap(300e18));
+
+        vm.warp(deadline);
+        vm.prank(a);
+        claim.unlock(); // a exits; b's share is left behind in the pool
+
+        uint256 leftover = usdc.balanceOf(address(claim));
+        assertGt(leftover, 0);
+        uint256 ownerBefore = usdc.balanceOf(governor);
+
+        vm.prank(governor);
+        claim.close();
+
+        assertEq(usdc.balanceOf(address(claim)), 0);
+        assertEq(usdc.balanceOf(governor), ownerBefore + leftover);
+    }
+
+    function testCloseRevertsBeforeDeadline() public {
+        _fund();
+        _initialize();
+
+        vm.expectRevert(Claim2Step.OpenedError.selector);
+        vm.prank(governor);
+        claim.close();
+    }
+
+    function testCloseOnlyOwner() public {
+        _fund();
+        _initialize();
+        vm.warp(deadline);
+
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(a);
+        claim.close();
+    }
+
+    /// @dev Recalling the pool does not trap a locker's collateral: they can still unlock to recover their gov,
+    ///      they simply forgo any fiat reward once it has been swept.
+    function testCloseDoesNotStrandLockerCollateral() public {
+        _fund();
+        _initialize();
+
+        vm.prank(a);
+        claim.lock(UFixed18.wrap(500e18));
+
+        vm.warp(deadline);
+        vm.prank(governor);
+        claim.close(); // owner recalls the entire remaining pool
+
+        vm.prank(a);
+        claim.unlock();
+        assertEq(gov.balanceOf(a), 500e18); // gov returned
+        assertEq(usdc.balanceOf(address(claim)), 0);
+    }
 }
