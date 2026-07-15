@@ -177,7 +177,7 @@ contract Claim2StepMainnetTest is Test {
         assertFalse(claim.closed()); // still inside the lock window
         _passLockedHolderProposal(alice, bob, aLock, bLock);
 
-        // --- phase 2: unlock ---
+        // --- phase 2: alice exits; bob is a straggler whose share becomes leftover ---
         vm.warp(deadline);
         assertTrue(claim.closed());
 
@@ -188,13 +188,24 @@ contract Claim2StepMainnetTest is Test {
         assertEq(ess.balanceOf(alice), aLock); // gov returned...
         assertEq(ess.getCurrentVotes(alice), 0); // ...and voting power released with it
 
-        // bob is the last locker, so his unlock sweeps the remainder of the pool
-        uint256 sweepB = usdc.balanceOf(address(claim));
+        // bob never returns to unlock, so his reward share stays behind in the pool
+        uint256 leftover = usdc.balanceOf(address(claim));
+        assertGt(leftover, 0);
+
+        // well after close, governance (the owner) recalls the leftover to the timelock at its discretion.
+        // pranking the timelock stands in for a follow-up proposal executing claim.close().
+        vm.warp(deadline + 30 days);
+        uint256 ownerBefore = usdc.balanceOf(TIMELOCK);
+        vm.prank(TIMELOCK);
+        claim.close();
+        assertEq(usdc.balanceOf(address(claim)), 0);
+        assertEq(usdc.balanceOf(TIMELOCK), ownerBefore + leftover);
+
+        // the recall does not strand bob's collateral: he can still unlock to recover his ESS (no reward left)
         vm.prank(bob);
         claim.unlock();
-        assertEq(usdc.balanceOf(bob), rewardB + sweepB);
         assertEq(ess.balanceOf(bob), bLock);
-        assertEq(usdc.balanceOf(address(claim)), 0);
+        assertEq(ess.getCurrentVotes(bob), 0);
     }
 
     /// @dev A fresh proposal, proposed by locked-holder `alice` and carried to execution by the votes of both

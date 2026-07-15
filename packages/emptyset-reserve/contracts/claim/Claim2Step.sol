@@ -96,6 +96,11 @@ contract Claim2Step is Ownable2Step {
         emit Unlocked(msg.sender, amount, reward);
     }
 
+    function close() external onlyOwner {
+        if (!closed()) revert OpenedError();
+        fiat.push(owner());
+    }
+
     function initialized() public view returns (bool) {
         return pendingOwner() == address(0);
     }
