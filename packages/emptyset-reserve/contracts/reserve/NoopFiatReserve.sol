@@ -46,7 +46,7 @@ contract NoopFiatReserve is IReserve {
     }
 
     /// @inheritdoc IReserve
-    function mint(UFixed18 amount) external returns (UFixed18) {
+    function mint(UFixed18 amount) external virtual returns (UFixed18) {
         fiat.pull(msg.sender, UFixed6Lib.from(amount, true));
 
         IDSU(Token18.unwrap(dsu)).mint(UFixed18.unwrap(amount));
